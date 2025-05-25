@@ -1,0 +1,9 @@
+export const GRID_SIZE = 40;
+export const MARGIN = 8;
+export const CELL_SIZE = GRID_SIZE + MARGIN;
+export const ANIMATION_DURATION = 300;
+export const MIN_SIZE = 2;
+export const MAX_SIZE = 24;
+export const CONTAINER_PADDING = 16;
+export const MIN_CONTAINER_HEIGHT = 200;
+export const DEBOUNCE_DELAY = 150; 
