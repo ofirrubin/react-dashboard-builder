@@ -1,14 +1,11 @@
-"use client"
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Plus, X, MoreHorizontal } from 'lucide-react'; 
 import { DashboardToolbar } from './DashboardToolbar'; 
 import { getWidgetComponent } from './widgets'; 
-import { GridItem, DragState, ResizeState, DashboardProps, WidgetType } from '../types';
+import { GridItem, DragState, ResizeState, DashboardProps, WidgetType, DashboardActions, DashboardState, CustomToolbarProps } from '../types';
 import { GRID_SIZE, MARGIN, CELL_SIZE, ANIMATION_DURATION, MIN_SIZE, MAX_SIZE, CONTAINER_PADDING, MIN_CONTAINER_HEIGHT, DEBOUNCE_DELAY } from '../constants';
 
 
-
-// Widget content renderers
 const createWidgetRenderer = (widgetRegistry?: Record<string, React.ComponentType<any>>) => (item: GridItem) => {
   let WidgetComponent;
   
@@ -29,7 +26,20 @@ export default function Dashboard({
   onItemsChange,
   className = "",
   enableEditMode = true,
-  defaultEditMode = true
+  defaultEditMode = true,
+  
+  // Grid appearance
+  gridMode = 'elegant',
+  
+  // Toolbar customization options
+  showDefaultToolbar = true,
+  customToolbar,
+  toolbarClassName = "",
+  
+  // Exposed action callbacks
+  onEditModeChange,
+  onAddWidgetModeChange,
+  onFixedHeightChange,
 }: DashboardProps) {
   const renderWidgetContent = useMemo(() => createWidgetRenderer(widgetRegistry), [widgetRegistry]);
   
@@ -457,114 +467,60 @@ export default function Dashboard({
     return finalResult;
   };
 
-  const handleMouseDown = (e: React.MouseEvent, id: string) => {
-    if (!isEditMode) return;
-    e.preventDefault();
-    const targetElement = e.currentTarget as HTMLElement;
-    
-    const item = items.find(i => i.id === id);
-    if (!item) return;
-    
-    // Get the grid content area bounds
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     const gridContentRect = containerRef.current?.getBoundingClientRect();
     if (!gridContentRect) return;
-    
-    // Calculate mouse position relative to grid content area
+
     const mouseXInGridContent = e.clientX - gridContentRect.left - CONTAINER_PADDING;
     const mouseYInGridContent = e.clientY - gridContentRect.top - CONTAINER_PADDING;
-    
-    // Calculate the item's current pixel position
-    const itemPixelPos = gridToPixel(item.x, item.y);
-    
-    // Store the offset from mouse to item's top-left corner (both in grid content coordinates)
-    setDragState({
-      id,
-      startX: mouseXInGridContent - itemPixelPos.x,
-      startY: mouseYInGridContent - itemPixelPos.y,
-      originalItem: { ...item }
-    });
-    setPreview({ ...item });
-  };
 
-  const handleResizeStart = (e: React.MouseEvent, id: string, handle: string) => {
-    if (!isEditMode) return;
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const itemElement = (e.target as HTMLElement).closest('.group') as HTMLElement;
-    if (!itemElement) return;
-    
-    const item = items.find(i => i.id === id);
-    if (!item) return;
-    
-    // For resize, startX/Y should be the initial mouse position relative to the grid content area
-    const gridContentRect = containerRef.current?.getBoundingClientRect();
-    if(!gridContentRect) return;
-
-    setResizeState({
-      id,
-      startX: e.clientX - gridContentRect.left - CONTAINER_PADDING,
-      startY: e.clientY - gridContentRect.top - CONTAINER_PADDING,
-      originalItem: { ...item },
-      handle
-    });
-    setPreview({ ...item });
-  };
-
-const handleMouseMove = useCallback((e: MouseEvent) => {
-  const gridContentRect = containerRef.current?.getBoundingClientRect();
-  if (!gridContentRect) return;
-
-  const mouseXInGridContent = e.clientX - gridContentRect.left - CONTAINER_PADDING;
-  const mouseYInGridContent = e.clientY - gridContentRect.top - CONTAINER_PADDING;
-
-  if (dragState && preview) {
-    const itemX = mouseXInGridContent - dragState.startX;
-    const itemY = mouseYInGridContent - dragState.startY;
-    
-    // FIX: Convert pixel coordinates to grid coordinates properly
-    const gridPos = {
-      x: pixelToGrid(itemX, 0, 'x'),      // Only X coordinate matters for X grid position
-      y: pixelToGrid(0, itemY, 'y')       // Only Y coordinate matters for Y grid position
-    };
-    
-    let newX = Math.max(0, Math.min(gridDimensions.cols - preview.w, gridPos.x));
-    let newY = Math.max(0, Math.min(gridDimensions.rows - preview.h, gridPos.y));
-    
-    setPreview({ ...preview, x: newX, y: newY });
-  }
-
-  if (resizeState && preview) {
-    let { x, y, w, h } = resizeState.originalItem;
-    const handle = resizeState.handle;
-
-    // FIX: Calculate delta in grid units properly for resize
-    const dxInGridUnits = pixelToGrid(mouseXInGridContent - resizeState.startX, 0, 'x');
-    const dyInGridUnits = pixelToGrid(0, mouseYInGridContent - resizeState.startY, 'y');
-    
-    if (handle.includes('e')) w = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeState.originalItem.w + dxInGridUnits));
-    if (handle.includes('w')) {
-      const newW = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeState.originalItem.w - dxInGridUnits));
-      x = resizeState.originalItem.x + (resizeState.originalItem.w - newW);
-      w = newW;
+    if (dragState && preview) {
+      const itemX = mouseXInGridContent - dragState.startX;
+      const itemY = mouseYInGridContent - dragState.startY;
+      
+      // FIX: Convert pixel coordinates to grid coordinates properly
+      const gridPos = {
+        x: pixelToGrid(itemX, 0, 'x'),      // Only X coordinate matters for X grid position
+        y: pixelToGrid(0, itemY, 'y')       // Only Y coordinate matters for Y grid position
+      };
+      
+      let newX = Math.max(0, Math.min(gridDimensions.cols - preview.w, gridPos.x));
+      let newY = Math.max(0, Math.min(gridDimensions.rows - preview.h, gridPos.y));
+      
+      setPreview({ ...preview, x: newX, y: newY });
     }
-    if (handle.includes('s')) h = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeState.originalItem.h + dyInGridUnits));
-    if (handle.includes('n')) {
-      const newH = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeState.originalItem.h - dyInGridUnits));
-      y = resizeState.originalItem.y + (resizeState.originalItem.h - newH);
-      h = newH;
+
+    if (resizeState && preview) {
+      let { x, y, w, h } = resizeState.originalItem;
+      const handle = resizeState.handle;
+
+      // FIX: Calculate delta in grid units properly for resize
+      const dxInGridUnits = pixelToGrid(mouseXInGridContent - resizeState.startX, 0, 'x');
+      const dyInGridUnits = pixelToGrid(0, mouseYInGridContent - resizeState.startY, 'y');
+      
+      if (handle.includes('e')) w = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeState.originalItem.w + dxInGridUnits));
+      if (handle.includes('w')) {
+        const newW = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeState.originalItem.w - dxInGridUnits));
+        x = resizeState.originalItem.x + (resizeState.originalItem.w - newW);
+        w = newW;
+      }
+      if (handle.includes('s')) h = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeState.originalItem.h + dyInGridUnits));
+      if (handle.includes('n')) {
+        const newH = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeState.originalItem.h - dyInGridUnits));
+        y = resizeState.originalItem.y + (resizeState.originalItem.h - newH);
+        h = newH;
+      }
+      
+      x = Math.max(0, x);
+      y = Math.max(0, y);
+      w = Math.min(w, gridDimensions.cols - x);
+      h = Math.min(h, gridDimensions.rows - y);
+      w = Math.max(MIN_SIZE, w);
+      h = Math.max(MIN_SIZE, h);
+      
+      setPreview({ ...preview, x, y, w, h });
     }
-    
-    x = Math.max(0, x);
-    y = Math.max(0, y);
-    w = Math.min(w, gridDimensions.cols - x);
-    h = Math.min(h, gridDimensions.rows - y);
-    w = Math.max(MIN_SIZE, w);
-    h = Math.max(MIN_SIZE, h);
-    
-    setPreview({ ...preview, x, y, w, h });
-  }
-}, [dragState, resizeState, preview, gridDimensions.cols, gridDimensions.rows]);
+  }, [dragState, resizeState, preview, gridDimensions.cols, gridDimensions.rows]);
 
   const handleMouseUp = useCallback(() => {
     if ((dragState || resizeState) && preview) {
@@ -633,14 +589,30 @@ const handleMouseMove = useCallback((e: MouseEvent) => {
 
   const toggleEditMode = () => {
     if (!enableEditMode) return; // Don't allow toggling if edit mode is disabled
-    setIsEditMode(!isEditMode);
+    const newEditMode = !isEditMode;
+    setIsEditMode(newEditMode);
     setIsAddWidgetMode(false);
     setDragState(null); setResizeState(null); setPreview(null);
+    
+    // Call the callback if provided
+    onEditModeChange?.(newEditMode);
   };
 
   const toggleAddWidgetMode = () => {
     if (!isEditMode) return;
-    setIsAddWidgetMode(!isAddWidgetMode);
+    const newAddWidgetMode = !isAddWidgetMode;
+    setIsAddWidgetMode(newAddWidgetMode);
+    
+    // Call the callback if provided
+    onAddWidgetModeChange?.(newAddWidgetMode);
+  };
+
+  const toggleFixedHeight = () => {
+    const newMaxHeight = maxHeight === null ? MIN_CONTAINER_HEIGHT * 1.5 : null;
+    setMaxHeight(newMaxHeight);
+    
+    // Call the callback if provided
+    onFixedHeightChange?.(newMaxHeight !== null);
   };
 
   const addWidgetAtPosition = (widgetConfig: WidgetType, x?: number, y?: number) => {
@@ -789,13 +761,6 @@ const autoOrganize = () => {
 };
 
 
-  const renderResizeHandles = (item: GridItem) => { 
-    const cornerHandles = [
-      { h: 'se', pos: '-bottom-3 -right-3', cursor: 'cursor-se-resize', rotate: '' }, { h: 'sw', pos: '-bottom-3 -left-3', cursor: 'cursor-sw-resize', rotate: 'rotate-90' }, { h: 'ne', pos: '-top-3 -right-3', cursor: 'cursor-ne-resize', rotate: '-rotate-90' }, { h: 'nw', pos: '-top-3 -left-3', cursor: 'cursor-nw-resize', rotate: 'rotate-180' },
-    ];
-    return (<>{cornerHandles.map(({ h, pos, cursor, rotate }) => (<div key={h} className={`absolute ${pos} w-8 h-8 p-1 opacity-100 hover:opacity-100 transition-all duration-200 ${cursor} z-20`} onMouseDown={(e) => handleResizeStart(e, item.id, h)}><div className={`relative w-full h-full ${rotate}`}><div className="absolute bottom-0 right-0 w-1.5 h-4 rounded-full bg-blue-500 dark:bg-blue-400 hover:bg-blue-600 dark:hover:bg-blue-300 transition-colors shadow-sm" /><div className="absolute bottom-0 right-0 w-4 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 hover:bg-blue-600 dark:hover:bg-blue-300 transition-colors shadow-sm" /></div></div>))}</>);
-  };
-
   const renderItem = (item: GridItem, isPreview = false) => { 
     const pos = gridToPixel(item.x, item.y);
     // Ensure width/height are at least 0 to prevent style errors if item.w/h somehow become negative during processing
@@ -808,16 +773,83 @@ const autoOrganize = () => {
     };
     const isActive = dragState?.id === item.id || resizeState?.id === item.id;
 
+    // Handle mouse down for both dragging and resizing
+    const handleMouseDownOnWidget = (e: React.MouseEvent) => {
+      if (!isEditMode || isPreview) return;
+      e.preventDefault();
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      // Define corner areas (20px from each edge)
+      const cornerSize = 20;
+      const isInTopLeft = mouseX <= cornerSize && mouseY <= cornerSize;
+      const isInTopRight = mouseX >= rect.width - cornerSize && mouseY <= cornerSize;
+      const isInBottomLeft = mouseX <= cornerSize && mouseY >= rect.height - cornerSize;
+      const isInBottomRight = mouseX >= rect.width - cornerSize && mouseY >= rect.height - cornerSize;
+      
+      if (isInTopLeft || isInTopRight || isInBottomLeft || isInBottomRight) {
+        // Handle resize
+        let handle = '';
+        if (isInTopLeft) handle = 'nw';
+        else if (isInTopRight) handle = 'ne';
+        else if (isInBottomLeft) handle = 'sw';
+        else if (isInBottomRight) handle = 'se';
+        
+        const gridContentRect = containerRef.current?.getBoundingClientRect();
+        if(!gridContentRect) return;
+
+        setResizeState({
+          id: item.id,
+          startX: e.clientX - gridContentRect.left - CONTAINER_PADDING,
+          startY: e.clientY - gridContentRect.top - CONTAINER_PADDING,
+          originalItem: { ...item },
+          handle
+        });
+        setPreview({ ...item });
+      } else {
+        // Handle drag from header area
+        const gridContentRect = containerRef.current?.getBoundingClientRect();
+        if (!gridContentRect) return;
+        
+        // Calculate mouse position relative to grid content area
+        const mouseXInGridContent = e.clientX - gridContentRect.left - CONTAINER_PADDING;
+        const mouseYInGridContent = e.clientY - gridContentRect.top - CONTAINER_PADDING;
+        
+        // Calculate the item's current pixel position
+        const itemPixelPos = gridToPixel(item.x, item.y);
+        
+        // Store the offset from mouse to item's top-left corner (both in grid content coordinates)
+        setDragState({
+          id: item.id,
+          startX: mouseXInGridContent - itemPixelPos.x,
+          startY: mouseYInGridContent - itemPixelPos.y,
+          originalItem: { ...item }
+        });
+        setPreview({ ...item });
+      }
+    };
+
     return (
       <div
         key={`${isPreview ? 'preview-' : ''}${item.id}`}
-        className={`group absolute rounded-lg border overflow-hidden ${ item.isAnimating || isPreview ? 'transition-all duration-300' : ''} ${ isPreview ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600 border-2 opacity-80 z-50' : `bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl dark:shadow-gray-900/50 z-10 ${isActive && !isPreview ? 'opacity-50' : ''}`}`}
+        className={`group absolute rounded-lg border ${ item.isAnimating || isPreview ? 'transition-all duration-300' : ''} ${ isPreview ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600 border-2 opacity-80 z-50' : `bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl dark:shadow-gray-900/50 z-10 ${isActive && !isPreview ? 'opacity-50' : ''}`} ${isEditMode && !isPreview ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
         style={{ left: pos.x, top: pos.y, width: size.width, height: size.height }}
+        onMouseDown={handleMouseDownOnWidget}
       >
-        {!isPreview && isEditMode && renderResizeHandles(item)}
+        {/* Corner resize areas - invisible but functional */}
+        {!isPreview && isEditMode && (
+          <>
+            <div className="absolute top-0 left-0 w-5 h-5 cursor-nw-resize z-20" />
+            <div className="absolute top-0 right-0 w-5 h-5 cursor-ne-resize z-20" />
+            <div className="absolute bottom-0 left-0 w-5 h-5 cursor-sw-resize z-20" />
+            <div className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize z-20" />
+          </>
+        )}
+        
         <div 
-          className={`flex items-center justify-between p-2 text-xs border-b ${isEditMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} select-none ${ isPreview ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-200 dark:border-blue-700' : 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 border-gray-200 dark:border-gray-700 hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-600 dark:hover:to-gray-600'}`}
-          onMouseDown={!isPreview && isEditMode ? (e) => handleMouseDown(e, item.id) : undefined}
+          className={`flex items-center justify-between p-2 text-xs border-b select-none ${ isPreview ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-200 dark:border-blue-700' : 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 border-gray-200 dark:border-gray-700 hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-600 dark:hover:to-gray-600'}`}
         >
           <span className={`font-medium truncate ${isPreview ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>
             {item.title}
@@ -829,7 +861,7 @@ const autoOrganize = () => {
             </div>
           )}
         </div>
-        <div className="p-1 flex items-center justify-center h-[calc(100%-30px)]"> 
+        <div className="p-1 flex items-center justify-center h-[calc(100%-30px)] overflow-hidden"> 
           {item.content()}
         </div>
       </div>
@@ -877,22 +909,139 @@ const autoOrganize = () => {
     return () => clearTimeout(timeoutId);
   }, [JSON.stringify(items.map(({isAnimating, ...rest})=>rest)), gridDimensions.cols, gridDimensions.rows, dragState, resizeState, preview]);
 
+  // Create dashboard actions object for custom toolbars
+  const dashboardActions: DashboardActions = {
+    toggleEditMode,
+    toggleAddWidgetMode,
+    autoOrganize,
+    toggleFixedHeight,
+    addWidget: addWidgetAtPosition,
+    removeItem,
+  };
+
+  // Create dashboard state object for custom toolbars
+  const dashboardState: DashboardState = {
+    isEditMode,
+    isAddWidgetMode,
+    isFixedHeight: maxHeight !== null,
+    gridDimensions,
+    itemCount: items.length,
+    items,
+  };
+
+  // Custom toolbar props
+  const customToolbarProps: CustomToolbarProps = {
+    state: dashboardState,
+    actions: dashboardActions,
+    availableWidgetTypes,
+  };
+
+  // Grid rendering functions
+  const renderElegantGrid = () => (
+    <>
+      {/* Light mode elegant grid */}
+      <div 
+        className="absolute pointer-events-none opacity-20"
+        style={{
+          top: CONTAINER_PADDING, left: CONTAINER_PADDING,
+          right: CONTAINER_PADDING, bottom: CONTAINER_PADDING,
+          backgroundImage: `
+            linear-gradient(to right, rgba(156, 163, 175, 0.25) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(156, 163, 175, 0.25) 1px, transparent 1px)
+          `,
+          backgroundSize: `${CELL_SIZE}px ${CELL_SIZE}px`,
+        }}
+      />
+      
+      {/* Dark mode elegant grid */}
+      <div 
+        className="absolute pointer-events-none dark:block hidden opacity-15"
+        style={{
+          top: CONTAINER_PADDING, left: CONTAINER_PADDING,
+          right: CONTAINER_PADDING, bottom: CONTAINER_PADDING,
+          backgroundImage: `
+            linear-gradient(to right, rgba(75, 85, 99, 0.3) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(75, 85, 99, 0.3) 1px, transparent 1px)
+          `,
+          backgroundSize: `${CELL_SIZE}px ${CELL_SIZE}px`,
+        }}
+      />
+    </>
+  );
+
+  const renderDotsGrid = () => (
+    <div 
+      className="absolute pointer-events-none opacity-30 dark:opacity-20"
+      style={{
+        top: CONTAINER_PADDING, left: CONTAINER_PADDING,
+        right: CONTAINER_PADDING, bottom: CONTAINER_PADDING,
+        backgroundImage: `
+          radial-gradient(circle at center, rgba(156, 163, 175, 0.4) 1px, transparent 1px),
+          radial-gradient(circle at center, rgba(75, 85, 99, 0.5) 1px, transparent 1px)
+        `,
+        backgroundSize: `${CELL_SIZE}px ${CELL_SIZE}px`,
+        backgroundPosition: `${CELL_SIZE/2}px ${CELL_SIZE/2}px`,
+      }}
+    />
+  );
+
+  const renderHarshGrid = () => (
+    <div 
+      className="absolute opacity-20 dark:opacity-10 pointer-events-none"
+      style={{
+        top: CONTAINER_PADDING, left: CONTAINER_PADDING,
+        right: CONTAINER_PADDING, bottom: CONTAINER_PADDING,
+        backgroundImage: `
+          linear-gradient(to right, #ccc 1px, transparent 1px), 
+          linear-gradient(to bottom, #ccc 1px, transparent 1px)
+        `,
+        backgroundSize: `${CELL_SIZE}px ${CELL_SIZE}px`,
+      }}
+    />
+  );
+
+  const renderGrid = () => {
+    switch (gridMode) {
+      case 'dots':
+        return renderDotsGrid();
+      case 'harsh':
+        return renderHarshGrid();
+      case 'blank':
+        return null;
+      case 'elegant':
+      default:
+        return renderElegantGrid();
+    }
+  };
 
   return (
     <div className={`p-4 bg-gray-50 dark:bg-gray-900 min-h-screen ${className}`}>
-      <DashboardToolbar
-        isEditMode={isEditMode} 
-        onToggleMode={toggleEditMode} 
-        onAutoOrganize={autoOrganize}
-        onToggleFixedHeight={() => setMaxHeight(maxHeight === null ? MIN_CONTAINER_HEIGHT * 1.5 : null)}
-        isFixedHeight={maxHeight !== null} 
-        gridDimensions={gridDimensions} 
-        itemCount={items.length}
-        isAddWidgetMode={isAddWidgetMode} 
-        onToggleAddWidgetMode={toggleAddWidgetMode} 
-        onAddWidget={addWidgetAtPosition}
-        availableWidgetTypes={availableWidgetTypes}
-      />
+      {/* Conditional toolbar rendering */}
+      {showDefaultToolbar && !customToolbar && (
+        <DashboardToolbar
+          isEditMode={isEditMode} 
+          onToggleMode={toggleEditMode} 
+          onAutoOrganize={autoOrganize}
+          onToggleFixedHeight={toggleFixedHeight}
+          isFixedHeight={maxHeight !== null} 
+          gridDimensions={gridDimensions} 
+          itemCount={items.length}
+          isAddWidgetMode={isAddWidgetMode} 
+          onToggleAddWidgetMode={toggleAddWidgetMode} 
+          onAddWidget={addWidgetAtPosition}
+          availableWidgetTypes={availableWidgetTypes}
+        />
+      )}
+      
+      {/* Custom toolbar */}
+      {customToolbar && (
+        <div className={toolbarClassName}>
+          {React.isValidElement(customToolbar) 
+            ? customToolbar
+            : React.createElement(customToolbar as React.ComponentType<CustomToolbarProps>, customToolbarProps)
+          }
+        </div>
+      )}
 
       <div className="w-full">
         <div 
@@ -900,16 +1049,7 @@ const autoOrganize = () => {
           className={`relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg w-full ${maxHeight ? 'overflow-auto' : 'overflow-hidden'}`}
           style={{ height: gridDimensions.height, minHeight: MIN_CONTAINER_HEIGHT, padding: CONTAINER_PADDING }}
         >
-          <div 
-            className="absolute opacity-20 dark:opacity-10 pointer-events-none"
-            style={{
-              top: CONTAINER_PADDING, left: CONTAINER_PADDING,
-              right: CONTAINER_PADDING, bottom: CONTAINER_PADDING,
-              backgroundImage: `linear-gradient(to right, #ccc 1px, transparent 1px), linear-gradient(to bottom, #ccc 1px, transparent 1px)`,
-              backgroundSize: `${CELL_SIZE}px ${CELL_SIZE}px`,
-              color: '#e5e7eb' 
-            }}
-          />
+          {renderGrid()}
           <div 
             className="relative w-full" 
             style={{ height: Math.max(0, gridDimensions.rows * CELL_SIZE - MARGIN), minHeight: `calc(100% - ${CONTAINER_PADDING * 2}px)`}}

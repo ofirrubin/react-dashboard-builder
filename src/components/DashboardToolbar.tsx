@@ -162,41 +162,44 @@ export function DashboardToolbar({
                     const PreviewComponent = widget.preview || getPreviewComponent(widget.type);
                     
                     return (
-                      <Tooltip key={widget.id} content={
-                        <div className="p-3">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="text-blue-600 dark:text-blue-400">
+                      <Tooltip key={widget.id}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            onClick={() => onAddWidget?.(widget)}
+                            className="flex-shrink-0 h-20 w-24 p-2 flex flex-col items-center gap-1 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors group"
+                          >
+                            <div className="text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300">
                               {widget.icon}
                             </div>
-                            <div>
-                              <h4 className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                                {widget.title}
-                              </h4>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Size: {widget.defaultSize.w}×{widget.defaultSize.h}
-                              </p>
+                            <span className="text-xs font-medium text-center leading-tight">
+                              {widget.title}
+                            </span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="text-blue-600 dark:text-blue-400">
+                                {widget.icon}
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                                  {widget.title}
+                                </h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Size: {widget.defaultSize.w}×{widget.defaultSize.h}
+                                </p>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                              {widget.description}
+                            </p>
+                            <div className="h-16 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-750">
+                              <PreviewComponent />
                             </div>
                           </div>
-                          <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
-                            {widget.description}
-                          </p>
-                          <div className="h-16 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-750">
-                            <PreviewComponent />
-                          </div>
-                        </div>
-                      }>
-                        <Button
-                          variant="outline"
-                          onClick={() => onAddWidget?.(widget)}
-                          className="flex-shrink-0 h-20 w-24 p-2 flex flex-col items-center gap-1 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors group"
-                        >
-                          <div className="text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300">
-                            {widget.icon}
-                          </div>
-                          <span className="text-xs font-medium text-center leading-tight">
-                            {widget.title}
-                          </span>
-                        </Button>
+                        </TooltipContent>
                       </Tooltip>
                     );
                   })}

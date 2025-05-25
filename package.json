@@ -1,6 +1,6 @@
 {
   "name": "react-dashboard-builder",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "A flexible, drag-and-drop dashboard builder component for React",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -9,8 +9,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c",
-    "dev": "rollup -c -w",
+    "build": "rollup -c rollup.config.mjs",
+    "dev": "rollup -c rollup.config.mjs -w",
     "prepare": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -30,7 +30,11 @@
     "react-dom": ">=16.8.0"
   },
   "dependencies": {
-    "lucide-react": "^0.263.1"
+    "@radix-ui/react-tooltip": "^1.2.7",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.263.1",
+    "tailwind-merge": "^3.3.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.4",
