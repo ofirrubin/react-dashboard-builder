@@ -48,10 +48,10 @@ export function DashboardToolbar({
   const scroll = (direction: 'left' | 'right') => {
     if (!carouselRef.current) return;
     const scrollAmount = 200;
-    const newPosition = direction === 'left' 
+    const newPosition = direction === 'left'
       ? Math.max(0, scrollPosition - scrollAmount)
       : scrollPosition + scrollAmount;
-    
+
     carouselRef.current.scrollTo({ left: newPosition, behavior: 'smooth' });
     setScrollPosition(newPosition);
   };
@@ -66,7 +66,7 @@ export function DashboardToolbar({
                 onClick={onToggleMode}
                 variant={isEditMode ? "default" : "outline"}
                 size="sm"
-                className="gap-2"
+                className="gap-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
               >
                 {isEditMode ? (
                   <>
@@ -85,7 +85,7 @@ export function DashboardToolbar({
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {isEditMode && (
               <>
@@ -94,7 +94,7 @@ export function DashboardToolbar({
                     onClick={onToggleAddWidgetMode}
                     variant="outline"
                     size="sm"
-                    className="gap-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                    className="gap-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 bg-white dark:bg-gray-800"
                   >
                     <X size={16} />
                     Cancel
@@ -104,27 +104,28 @@ export function DashboardToolbar({
                     onClick={onToggleAddWidgetMode}
                     variant="default"
                     size="sm"
-                    className="gap-2"
+                    className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                   >
                     <Plus size={16} />
                     Add Widget
                   </Button>
                 )}
-                
+
                 <Button
                   onClick={onToggleFixedHeight}
                   variant="secondary"
                   size="sm"
+                  className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                 >
                   {isFixedHeight ? 'Auto Height' : 'Fix Height'}
                 </Button>
-                
+
                 <Button
                   onClick={onAutoOrganize}
                   variant="outline"
                   size="sm"
                   disabled={itemCount === 0}
-                  className="gap-2"
+                  className="gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800"
                 >
                   <Zap size={16} />
                   Auto Organize
@@ -140,7 +141,7 @@ export function DashboardToolbar({
             <div className="flex items-center gap-2 mb-3">
               <h3 className="font-medium text-gray-800 dark:text-gray-100">Select a widget to add:</h3>
             </div>
-            
+
             <div className="relative">
               <div className="flex items-center gap-2">
                 <Button
@@ -152,27 +153,27 @@ export function DashboardToolbar({
                 >
                   <ChevronLeft size={16} />
                 </Button>
-                
-                <div 
+
+                <div
                   ref={carouselRef}
                   className="flex gap-3 overflow-x-auto scrollbar-hide flex-1"
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                   {availableWidgetTypes.map((widget: WidgetType) => {
                     const PreviewComponent = widget.preview || getPreviewComponent(widget.type);
-                    
+
                     return (
                       <Tooltip key={widget.id}>
                         <TooltipTrigger asChild>
                           <Button
                             variant="outline"
                             onClick={() => onAddWidget?.(widget)}
-                            className="flex-shrink-0 h-20 w-24 p-2 flex flex-col items-center gap-1 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors group"
+                            className="flex-shrink-0 h-20 w-24 p-2 flex flex-col items-center gap-1 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/50 bg-white dark:bg-gray-800 transition-colors group border-gray-200 dark:border-gray-700"
                           >
                             <div className="text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300">
                               {widget.icon}
                             </div>
-                            <span className="text-xs font-medium text-center leading-tight">
+                            <span className="text-xs font-medium text-center leading-tight text-gray-700 dark:text-gray-200">
                               {widget.title}
                             </span>
                           </Button>
@@ -204,7 +205,7 @@ export function DashboardToolbar({
                     );
                   })}
                 </div>
-                
+
                 <Button
                   variant="outline"
                   size="sm"

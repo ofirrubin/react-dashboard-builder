@@ -1,5 +1,10 @@
+import './index.css';
+// Main Dashboard component
 // Main Dashboard component
 export { default as Dashboard } from './components/Dashboard';
+
+// Controller
+export { useDashboardController } from './lib/useDashboardController';
 
 // Toolbar component
 export { DashboardToolbar } from './components/DashboardToolbar';

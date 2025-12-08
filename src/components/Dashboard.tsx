@@ -1,25 +1,27 @@
+"use client";
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Plus, X, MoreHorizontal } from 'lucide-react'; 
-import { DashboardToolbar } from './DashboardToolbar'; 
-import { getWidgetComponent } from './widgets'; 
+import { Plus, X, MoreHorizontal } from 'lucide-react';
+import { DashboardToolbar } from './DashboardToolbar';
+import { getWidgetComponent } from './widgets';
+import { useDashboardController } from '../lib/useDashboardController';
 import { GridItem, DragState, ResizeState, DashboardProps, WidgetType, DashboardActions, DashboardState, CustomToolbarProps } from '../types';
 import { GRID_SIZE, MARGIN, CELL_SIZE, ANIMATION_DURATION, MIN_SIZE, MAX_SIZE, CONTAINER_PADDING, MIN_CONTAINER_HEIGHT, DEBOUNCE_DELAY } from '../constants';
 
 
 const createWidgetRenderer = (widgetRegistry?: Record<string, React.ComponentType<any>>) => (item: GridItem) => {
   let WidgetComponent;
-  
+
   if (widgetRegistry && widgetRegistry[item.type]) {
     WidgetComponent = widgetRegistry[item.type];
   } else {
     WidgetComponent = getWidgetComponent(item.type);
   }
-  
+
   // Pass all necessary props for rendering, matching GridItem structure if needed by actual widget
   return <WidgetComponent id={item.id} title={item.title} type={item.type} />;
 };
 
-export default function Dashboard({ 
+export default function Dashboard({
   availableWidgetTypes = [],
   initialItems = [],
   widgetRegistry,
@@ -27,22 +29,23 @@ export default function Dashboard({
   className = "",
   enableEditMode = true,
   defaultEditMode = true,
-  
+
   // Grid appearance
   gridMode = 'elegant',
-  
+
   // Toolbar customization options
   showDefaultToolbar = true,
   customToolbar,
   toolbarClassName = "",
-  
+
   // Exposed action callbacks
   onEditModeChange,
   onAddWidgetModeChange,
   onFixedHeightChange,
+  controller: externalController,
 }: DashboardProps) {
   const renderWidgetContent = useMemo(() => createWidgetRenderer(widgetRegistry), [widgetRegistry]);
-  
+
   // Transform initial items to include the content function
   const transformInitialItems = useCallback((items: Omit<GridItem, 'content'>[]): GridItem[] => {
     return items.map(item => ({
@@ -51,23 +54,44 @@ export default function Dashboard({
     }));
   }, [renderWidgetContent]);
 
-  const [items, setItems] = useState<GridItem[]>(() => transformInitialItems(initialItems));
-  
+  // Initialize controller
+  const internalController = useDashboardController({
+    initialItems: transformInitialItems(initialItems),
+    initialEditMode: enableEditMode ? defaultEditMode : false
+  });
+
+  const controller = externalController || internalController;
+
+  // Ensure items have content renderers (in case they came from external controller without them)
+  // Ensure items have content renderers (in case they came from external controller without them)
+  const items = useMemo(() => controller.items.map(item => {
+    // If content is missing or if we want to ensure we use the latest registry
+    if (!item.content) {
+      return { ...item, content: () => renderWidgetContent(item) };
+    }
+    return item;
+  }), [controller.items, renderWidgetContent]);
+
+  const setItems = controller.setItems;
+  const isEditMode = controller.isEditMode;
+  const setIsEditMode = controller.setEditMode;
+
+
   // Calculate nextId based on existing items
   const [nextId, setNextId] = useState(() => {
     if (initialItems.length === 0) return 1;
     const maxId = Math.max(...initialItems.map(item => parseInt(item.id) || 0));
     return maxId + 1;
   });
-  
+
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [resizeState, setResizeState] = useState<ResizeState | null>(null);
   const [preview, setPreview] = useState<GridItem | null>(null);
   const [gridDimensions, setGridDimensions] = useState({ width: 800, height: 600, cols: 16, rows: 12 });
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
-  const [isEditMode, setIsEditMode] = useState(enableEditMode ? defaultEditMode : false);
+  // isEditMode managed by controller
   const [isAddWidgetMode, setIsAddWidgetMode] = useState(false);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceTimer = useRef<number | null>(null);
   const isInitialLoad = useRef(true);
@@ -84,25 +108,29 @@ export default function Dashboard({
 
   // Update items when initialItems prop changes
   useEffect(() => {
+    // If external controller is provided, we should NOT sync with initialItems prop
+    // as the controller is the source of truth.
+    if (externalController) return;
+
     const currentItemsIds = items.map(item => item.id).sort().join(',');
     const newItemsIds = initialItems.map(item => item.id).sort().join(',');
-    
+
     // Only update if the items actually changed (compare by IDs and basic structure)
     if (currentItemsIds !== newItemsIds || items.length !== initialItems.length) {
       const transformedItems = transformInitialItems(initialItems);
       setItems(transformedItems);
       isInitialLoad.current = true; // Prevent triggering onItemsChange for this update
     }
-  }, [initialItems, transformInitialItems]);
+  }, [initialItems, transformInitialItems, externalController, items, setItems]);
 
-  const itemsOverlap = (a: GridItem, b: GridItem) => 
+  const itemsOverlap = (a: GridItem, b: GridItem) =>
     !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
 
   const isValidPosition = (item: GridItem, allItems: GridItem[], excludeId?: string) => {
     if (item.w < MIN_SIZE || item.h < MIN_SIZE) return false; // Check min size
-    if (item.x < 0 || item.y < 0 || 
-        item.x + item.w > gridDimensions.cols || 
-        item.y + item.h > gridDimensions.rows) {
+    if (item.x < 0 || item.y < 0 ||
+      item.x + item.w > gridDimensions.cols ||
+      item.y + item.h > gridDimensions.rows) {
       return false;
     }
     return !allItems.some(other => {
@@ -130,20 +158,20 @@ export default function Dashboard({
     y: y * CELL_SIZE
   });
 
-  const findSafePosition = (item: GridItem, existingItems: GridItem[], preferCurrentOverStoredOriginal = false): { x: number; y: number; w:number; h:number; isAnimating: boolean } => {
+  const findSafePosition = (item: GridItem, existingItems: GridItem[], preferCurrentOverStoredOriginal = false): { x: number; y: number; w: number; h: number; isAnimating: boolean } => {
     let currentW = Math.min(item.w, gridDimensions.cols);
     let currentH = item.h;
 
     let startX = item.x;
     let startY = item.y;
-    
+
     if (item.originalX !== undefined && item.originalY !== undefined && !preferCurrentOverStoredOriginal) {
       startX = item.originalX;
       startY = item.originalY;
       if (item.originalW !== undefined) currentW = Math.min(item.originalW, gridDimensions.cols);
       if (item.originalH !== undefined) currentH = item.originalH;
     }
-    
+
     startX = Math.min(startX, gridDimensions.cols - currentW);
 
     const testItemInitial = { ...item, x: startX, y: startY, w: currentW, h: currentH };
@@ -156,13 +184,13 @@ export default function Dashboard({
       for (let dy = -distance; dy <= distance; dy++) {
         for (let dx = -distance; dx <= distance; dx++) {
           if (Math.abs(dx) !== distance && Math.abs(dy) !== distance) continue;
-          
+
           const testX = startX + dx;
           const testY = startY + dy;
-          
-          if (testX < 0 || testX + currentW > gridDimensions.cols || 
-              testY < 0 || testY + currentH > gridDimensions.rows) continue;
-          
+
+          if (testX < 0 || testX + currentW > gridDimensions.cols ||
+            testY < 0 || testY + currentH > gridDimensions.rows) continue;
+
           const candidateItem = { ...item, x: testX, y: testY, w: currentW, h: currentH };
           if (isValidPosition(candidateItem, existingItems)) {
             return { ...candidateItem, isAnimating: true };
@@ -179,7 +207,7 @@ export default function Dashboard({
         }
       }
     }
-    
+
     const finalW = Math.min(currentW, gridDimensions.cols);
     const finalH = Math.min(currentH, gridDimensions.rows);
     console.warn(`⚠️ Last resort position for ${item.id}:`, { x: 0, y: 0, w: finalW, h: finalH });
@@ -187,29 +215,29 @@ export default function Dashboard({
   };
 
   const detectAndFixOverlaps = (currentItems: GridItem[], tryReAnchorToOriginals = false): GridItem[] => {
-    const result = currentItems.map(i => ({ ...i })); 
+    const result = currentItems.map(i => ({ ...i }));
     let hasOverlaps = true;
     let attempts = 0;
-    const maxAttempts = Math.max(20, result.length * 2); 
+    const maxAttempts = Math.max(20, result.length * 2);
 
     while (hasOverlaps && attempts < maxAttempts) {
       hasOverlaps = false;
       attempts++;
 
-      result.sort((a,b) => (a.y - b.y) || (a.x - b.x));
+      result.sort((a, b) => (a.y - b.y) || (a.x - b.x));
 
       for (let i = 0; i < result.length; i++) {
         for (let j = i + 1; j < result.length; j++) {
           if (itemsOverlap(result[i], result[j])) {
             hasOverlaps = true;
-            
+
             const itemToMoveIndex = (result[j].y > result[i].y || (result[j].y === result[i].y && result[j].x > result[i].x)) ? j : i;
-            
+
             const itemToMove = result[itemToMoveIndex];
             const fixedItems = result.filter((_, idx) => idx !== itemToMoveIndex);
-            
+
             const newPositionData = findSafePosition(itemToMove, fixedItems, !tryReAnchorToOriginals);
-            
+
             result[itemToMoveIndex] = {
               ...itemToMove,
               x: newPositionData.x,
@@ -227,37 +255,37 @@ export default function Dashboard({
     }
     return result;
   };
-  
+
   const calculateDimensions = useCallback(() => {
     if (!containerRef.current) return;
-    
+
     const rect = containerRef.current.getBoundingClientRect();
     const availableWidth = rect.width - CONTAINER_PADDING * 2;
     const newCols = Math.max(MIN_SIZE, Math.floor((availableWidth + MARGIN) / CELL_SIZE)); // Ensure at least MIN_SIZE cols
-    
+
     // Calculate maxY based on current items, ensuring items are within newCols
     const tempClampedItems = items.map(it => ({
-        ...it,
-        w: Math.min(it.originalW !==undefined ? it.originalW : it.w, newCols) // Use originalW if available
+      ...it,
+      w: Math.min(it.originalW !== undefined ? it.originalW : it.w, newCols) // Use originalW if available
     }));
     const maxY = tempClampedItems.length > 0 ? Math.max(...tempClampedItems.map(item => item.y + item.h), 0) : MIN_SIZE; // Min rows if empty
-    
-    const minRowsForMinHeight = Math.ceil((MIN_CONTAINER_HEIGHT - (CONTAINER_PADDING*2) + MARGIN) / CELL_SIZE);
+
+    const minRowsForMinHeight = Math.ceil((MIN_CONTAINER_HEIGHT - (CONTAINER_PADDING * 2) + MARGIN) / CELL_SIZE);
     const requiredRows = Math.max(minRowsForMinHeight, maxY + 4); // +4 buffer
-    
-    const newHeight = maxHeight || Math.max(MIN_CONTAINER_HEIGHT, 
-      requiredRows * CELL_SIZE - MARGIN + CONTAINER_PADDING * 2); 
-        
+
+    const newHeight = maxHeight || Math.max(MIN_CONTAINER_HEIGHT,
+      requiredRows * CELL_SIZE - MARGIN + CONTAINER_PADDING * 2);
+
     const oldCols = gridDimensions.cols;
     const oldRows = gridDimensions.rows;
 
-    setGridDimensions({ 
-      width: rect.width, 
-      height: newHeight, 
-      cols: newCols,       
-      rows: requiredRows 
+    setGridDimensions({
+      width: rect.width, // Updated to use full container width
+      height: newHeight,
+      cols: newCols,
+      rows: requiredRows
     });
-    
+
     // Trigger reflow if cols changed OR if rows significantly increased (might mean items need to spread)
     if ((newCols !== oldCols || requiredRows > oldRows + 2) && newCols > 0 && items.length > 0) {
       reflowItems(newCols, requiredRows);
@@ -267,13 +295,13 @@ export default function Dashboard({
 
   const reflowItems = (newCols: number, newRows: number) => {
     const processedItems: GridItem[] = [];
-    
+
     // Create a local isValidPosition function that uses the new dimensions
     const isValidPositionForNewGrid = (item: GridItem, allItems: GridItem[], excludeId?: string) => {
       if (item.w < MIN_SIZE || item.h < MIN_SIZE) return false;
-      if (item.x < 0 || item.y < 0 || 
-          item.x + item.w > newCols || 
-          item.y + item.h > newRows) {
+      if (item.x < 0 || item.y < 0 ||
+        item.x + item.w > newCols ||
+        item.y + item.h > newRows) {
         return false;
       }
       return !allItems.some(other => {
@@ -281,7 +309,7 @@ export default function Dashboard({
         return itemsOverlap(item, other);
       });
     };
-    
+
     const sortedItems = [...items].sort((a, b) => {
       const aHasOriginal = a.originalX !== undefined && a.originalY !== undefined;
       const bHasOriginal = b.originalX !== undefined && b.originalY !== undefined;
@@ -295,14 +323,14 @@ export default function Dashboard({
     });
 
     const itemsToProcess = sortedItems.map(item => {
-        const targetW = item.originalW !== undefined ? Math.min(item.originalW, newCols) : Math.min(item.w, newCols);
-        const targetH = item.originalH !== undefined ? item.originalH : item.h; // Heights usually less dependent on cols
-        return {
-            ...item,
-            w: Math.max(MIN_SIZE, targetW), // Ensure min width
-            h: Math.max(MIN_SIZE, targetH), // Ensure min height
-            isAnimating: true,
-        };
+      const targetW = item.originalW !== undefined ? Math.min(item.originalW, newCols) : Math.min(item.w, newCols);
+      const targetH = item.originalH !== undefined ? item.originalH : item.h; // Heights usually less dependent on cols
+      return {
+        ...item,
+        w: Math.max(MIN_SIZE, targetW), // Ensure min width
+        h: Math.max(MIN_SIZE, targetH), // Ensure min height
+        isAnimating: true,
+      };
     });
 
     if (newCols > gridDimensions.cols) { // Expanding
@@ -317,9 +345,9 @@ export default function Dashboard({
             y: item.originalY,
           };
           // Check if original position is valid and doesn't conflict with already restored items
-          if (restoredItem.x + restoredItem.w <= newCols && 
-              restoredItem.y + restoredItem.h <= newRows &&
-              isValidPositionForNewGrid(restoredItem, restored)) {
+          if (restoredItem.x + restoredItem.w <= newCols &&
+            restoredItem.y + restoredItem.h <= newRows &&
+            isValidPositionForNewGrid(restoredItem, restored)) {
             restored.push(restoredItem);
           } else {
             needsRepositioning.push(item); // item already has target w/h
@@ -331,7 +359,7 @@ export default function Dashboard({
 
       for (const item of needsRepositioning) {
         // preferCurrentOverStoredOriginal = false (use originalX/Y as base)
-        const safePosData = findSafePositionForNewGrid(item, restored, false, newCols, newRows); 
+        const safePosData = findSafePositionForNewGrid(item, restored, false, newCols, newRows);
         restored.push({
           ...item, // Contains item's target w/h
           x: safePosData.x,
@@ -343,53 +371,53 @@ export default function Dashboard({
       }
       setItems(detectAndFixOverlaps(restored, true));
     } else { // Shrinking or same size
-        for (const item of itemsToProcess) {
-            let targetX = item.x;
-            // If shrinking, ensure x is valid for new width. Max(0, newCols - item.w) is key.
-            if (newCols < gridDimensions.cols) {
-                targetX = Math.min(item.x, Math.max(0, newCols - item.w));
-            }
-            const itemForSafePos = {...item, x:targetX}; // item already has target w/h
-            // preferCurrentOverStoredOriginal = true (use current/adjusted x/y as base)
-            const safePosData = findSafePositionForNewGrid(itemForSafePos, processedItems, true, newCols, newRows); 
-            processedItems.push({
-                ...item, // Contains item's target w/h
-                x: safePosData.x,
-                y: safePosData.y,
-                w: safePosData.w,
-                h: safePosData.h,
-            });
+      for (const item of itemsToProcess) {
+        let targetX = item.x;
+        // If shrinking, ensure x is valid for new width. Max(0, newCols - item.w) is key.
+        if (newCols < gridDimensions.cols) {
+          targetX = Math.min(item.x, Math.max(0, newCols - item.w));
         }
-        setItems(detectAndFixOverlaps(processedItems, true));
+        const itemForSafePos = { ...item, x: targetX }; // item already has target w/h
+        // preferCurrentOverStoredOriginal = true (use current/adjusted x/y as base)
+        const safePosData = findSafePositionForNewGrid(itemForSafePos, processedItems, true, newCols, newRows);
+        processedItems.push({
+          ...item, // Contains item's target w/h
+          x: safePosData.x,
+          y: safePosData.y,
+          w: safePosData.w,
+          h: safePosData.h,
+        });
+      }
+      setItems(detectAndFixOverlaps(processedItems, true));
     }
-    setTimeout(() => setItems(prev => prev.map(it => ({ ...it, isAnimating: false }))), ANIMATION_DURATION);
+    setTimeout(() => setItems((prev: GridItem[]) => prev.map(it => ({ ...it, isAnimating: false }))), ANIMATION_DURATION);
   };
-  
+
   // Helper function for findSafePosition that works with new grid dimensions
-  const findSafePositionForNewGrid = (item: GridItem, existingItems: GridItem[], preferCurrentOverStoredOriginal = false, cols: number, rows: number): { x: number; y: number; w:number; h:number; isAnimating: boolean } => {
+  const findSafePositionForNewGrid = (item: GridItem, existingItems: GridItem[], preferCurrentOverStoredOriginal = false, cols: number, rows: number): { x: number; y: number; w: number; h: number; isAnimating: boolean } => {
     let currentW = Math.min(item.w, cols);
     let currentH = item.h;
 
     let startX = item.x;
     let startY = item.y;
-    
+
     if (item.originalX !== undefined && item.originalY !== undefined && !preferCurrentOverStoredOriginal) {
       startX = item.originalX;
       startY = item.originalY;
       if (item.originalW !== undefined) currentW = Math.min(item.originalW, cols);
       if (item.originalH !== undefined) currentH = item.originalH;
     }
-    
+
     startX = Math.min(startX, cols - currentW);
 
     const testItemInitial = { ...item, x: startX, y: startY, w: currentW, h: currentH };
-    
+
     // Check if initial position is valid using new grid dimensions
     const isValidForNewGrid = (testItem: GridItem) => {
       if (testItem.w < MIN_SIZE || testItem.h < MIN_SIZE) return false;
-      if (testItem.x < 0 || testItem.y < 0 || 
-          testItem.x + testItem.w > cols || 
-          testItem.y + testItem.h > rows) {
+      if (testItem.x < 0 || testItem.y < 0 ||
+        testItem.x + testItem.w > cols ||
+        testItem.y + testItem.h > rows) {
         return false;
       }
       return !existingItems.some(other => {
@@ -407,13 +435,13 @@ export default function Dashboard({
       for (let dy = -distance; dy <= distance; dy++) {
         for (let dx = -distance; dx <= distance; dx++) {
           if (Math.abs(dx) !== distance && Math.abs(dy) !== distance) continue;
-          
+
           const testX = startX + dx;
           const testY = startY + dy;
-          
-          if (testX < 0 || testX + currentW > cols || 
-              testY < 0 || testY + currentH > rows) continue;
-          
+
+          if (testX < 0 || testX + currentW > cols ||
+            testY < 0 || testY + currentH > rows) continue;
+
           const candidateItem = { ...item, x: testX, y: testY, w: currentW, h: currentH };
           if (isValidForNewGrid(candidateItem)) {
             return { ...candidateItem, isAnimating: true };
@@ -430,7 +458,7 @@ export default function Dashboard({
         }
       }
     }
-    
+
     const finalW = Math.min(currentW, cols);
     const finalH = Math.min(currentH, rows);
     console.warn(`⚠️ Last resort position for ${item.id} in new grid:`, { x: 0, y: 0, w: finalW, h: finalH });
@@ -445,11 +473,11 @@ export default function Dashboard({
     }
 
     const itemsToPotentiallyMove = updatedItems.filter(item => item.id !== movedId && itemsOverlap(item, movedItem));
-    
+
     for (const item of itemsToPotentiallyMove) {
       const otherItems = updatedItems.filter(other => other.id !== item.id);
-      const safePositionData = findSafePosition(item, otherItems, true); 
-      
+      const safePositionData = findSafePosition(item, otherItems, true);
+
       const itemIndex = updatedItems.findIndex(i => i.id === item.id);
       if (itemIndex !== -1) {
         updatedItems[itemIndex] = {
@@ -477,16 +505,16 @@ export default function Dashboard({
     if (dragState && preview) {
       const itemX = mouseXInGridContent - dragState.startX;
       const itemY = mouseYInGridContent - dragState.startY;
-      
+
       // FIX: Convert pixel coordinates to grid coordinates properly
       const gridPos = {
         x: pixelToGrid(itemX, 0, 'x'),      // Only X coordinate matters for X grid position
         y: pixelToGrid(0, itemY, 'y')       // Only Y coordinate matters for Y grid position
       };
-      
+
       let newX = Math.max(0, Math.min(gridDimensions.cols - preview.w, gridPos.x));
       let newY = Math.max(0, Math.min(gridDimensions.rows - preview.h, gridPos.y));
-      
+
       setPreview({ ...preview, x: newX, y: newY });
     }
 
@@ -497,7 +525,7 @@ export default function Dashboard({
       // FIX: Calculate delta in grid units properly for resize
       const dxInGridUnits = pixelToGrid(mouseXInGridContent - resizeState.startX, 0, 'x');
       const dyInGridUnits = pixelToGrid(0, mouseYInGridContent - resizeState.startY, 'y');
-      
+
       if (handle.includes('e')) w = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeState.originalItem.w + dxInGridUnits));
       if (handle.includes('w')) {
         const newW = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeState.originalItem.w - dxInGridUnits));
@@ -510,14 +538,14 @@ export default function Dashboard({
         y = resizeState.originalItem.y + (resizeState.originalItem.h - newH);
         h = newH;
       }
-      
+
       x = Math.max(0, x);
       y = Math.max(0, y);
       w = Math.min(w, gridDimensions.cols - x);
       h = Math.min(h, gridDimensions.rows - y);
       w = Math.max(MIN_SIZE, w);
       h = Math.max(MIN_SIZE, h);
-      
+
       setPreview({ ...preview, x, y, w, h });
     }
   }, [dragState, resizeState, preview, gridDimensions.cols, gridDimensions.rows]);
@@ -526,7 +554,7 @@ export default function Dashboard({
     if ((dragState || resizeState) && preview) {
       const activeId = dragState?.id || resizeState?.id || '';
       const actionType = dragState ? 'drag' : 'resize';
-      
+
       // Clamp final preview values to be safe
       const finalX = Math.max(0, Math.min(preview.x, gridDimensions.cols - MIN_SIZE));
       const finalY = Math.max(0, Math.min(preview.y, gridDimensions.rows - MIN_SIZE));
@@ -537,12 +565,12 @@ export default function Dashboard({
         ...preview,
         x: finalX, y: finalY, w: finalW, h: finalH,
       };
-            
+
       const updatedItems = items.map(item => {
         if (item.id === (dragState?.id || resizeState?.id)) {
-          return { 
-            ...finalPreview, 
-            originalX: finalPreview.x, 
+          return {
+            ...finalPreview,
+            originalX: finalPreview.x,
             originalY: finalPreview.y,
             originalW: finalPreview.w,
             originalH: finalPreview.h,
@@ -551,11 +579,11 @@ export default function Dashboard({
         }
         return item;
       });
-      
-      setItems(updatedItems);      
-      setTimeout(() => setItems(prev => prev.map(it => ({ ...it, isAnimating: false }))), ANIMATION_DURATION);
+
+      setItems(updatedItems);
+      setItems((prev: GridItem[]) => detectAndFixOverlaps(prev.map((it: GridItem) => ({ ...it, isAnimating: false })), true));
     }
-    
+
     setDragState(null);
     setResizeState(null);
     setPreview(null);
@@ -574,12 +602,12 @@ export default function Dashboard({
 
   useEffect(() => {
     const observer = new ResizeObserver(() => {
-       if (debounceTimer.current) clearTimeout(debounceTimer.current);
-       debounceTimer.current = setTimeout(calculateDimensions, DEBOUNCE_DELAY) as unknown as number;
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(calculateDimensions, DEBOUNCE_DELAY) as unknown as number;
     });
     if (containerRef.current) {
       observer.observe(containerRef.current);
-      calculateDimensions(); 
+      calculateDimensions();
     }
     return () => {
       observer.disconnect();
@@ -593,7 +621,7 @@ export default function Dashboard({
     setIsEditMode(newEditMode);
     setIsAddWidgetMode(false);
     setDragState(null); setResizeState(null); setPreview(null);
-    
+
     // Call the callback if provided
     onEditModeChange?.(newEditMode);
   };
@@ -602,7 +630,7 @@ export default function Dashboard({
     if (!isEditMode) return;
     const newAddWidgetMode = !isAddWidgetMode;
     setIsAddWidgetMode(newAddWidgetMode);
-    
+
     // Call the callback if provided
     onAddWidgetModeChange?.(newAddWidgetMode);
   };
@@ -610,24 +638,24 @@ export default function Dashboard({
   const toggleFixedHeight = () => {
     const newMaxHeight = maxHeight === null ? MIN_CONTAINER_HEIGHT * 1.5 : null;
     setMaxHeight(newMaxHeight);
-    
+
     // Call the callback if provided
     onFixedHeightChange?.(newMaxHeight !== null);
   };
 
   const addWidgetAtPosition = (widgetConfig: WidgetType, x?: number, y?: number) => {
     if (!isEditMode) return;
-    
+
     const tempItemForPositioning: GridItem = {
-      id: 'temp', 
+      id: 'temp',
       x: x ?? 0, y: y ?? 0,
       w: widgetConfig.defaultSize.w, h: widgetConfig.defaultSize.h,
       type: widgetConfig.type, title: widgetConfig.title, content: () => null,
       originalX: x ?? 0, originalY: y ?? 0,
       originalW: widgetConfig.defaultSize.w, originalH: widgetConfig.defaultSize.h,
     };
-    
-    const safePosData = findSafePosition(tempItemForPositioning, items, false); 
+
+    const safePosData = findSafePosition(tempItemForPositioning, items, false);
 
     const newItem: GridItem = {
       id: nextId.toString(),
@@ -642,126 +670,126 @@ export default function Dashboard({
 
     if (isValidPosition(newItem, items)) {
       const newItems = [...items, newItem];
-      setItems(detectAndFixOverlaps(newItems, true)); 
+      setItems(detectAndFixOverlaps(newItems, true));
       setNextId(prevId => prevId + 1);
-      setTimeout(() => setItems(prev => prev.map(it => ({ ...it, isAnimating: false }))), ANIMATION_DURATION);
+      setItems((prev: GridItem[]) => detectAndFixOverlaps(prev.map((it: GridItem) => ({ ...it, isAnimating: false })), true));
     } else {
       console.warn("Could not find valid position for new widget even after findSafePosition. Attempting fallback.", newItem);
       const fallbackItem = { ...newItem, x: 0, y: 0, originalX: 0, originalY: 0 };
       const newItems = [...items, fallbackItem];
       setItems(detectAndFixOverlaps(newItems, true));
       setNextId(prevId => prevId + 1);
-      setTimeout(() => setItems(prev => prev.map(it => ({ ...it, isAnimating: false }))), ANIMATION_DURATION);
+      setItems((prev: GridItem[]) => detectAndFixOverlaps(prev.map((it: GridItem) => ({ ...it, isAnimating: false })), true));
     }
   };
-  
+
   const removeItem = (id: string) => {
     if (!isEditMode) return;
     setItems(items.filter(item => item.id !== id));
   };
 
-const autoOrganize = () => {
-  if (!isEditMode) return;
-  
-  // Sort by area (largest first) then by ID for consistent ordering
-  const sorted = [...items].sort((a, b) => {
-    const aArea = (a.originalW ?? a.w) * (a.originalH ?? a.h);
-    const bArea = (b.originalW ?? b.w) * (b.originalH ?? b.h);
-    return bArea - aArea || parseInt(a.id) - parseInt(b.id);
-  });
-  
-  const organized: GridItem[] = [];
-  
-  // Process each item to find the best position
-  for (const item of sorted) {
-    // Use original dimensions if available, but clamp to current grid
-    const targetW = Math.min(
-      item.originalW ?? item.w, 
-      gridDimensions.cols
-    );
-    const targetH = item.originalH ?? item.h;
-    
-    // Create a temporary item for position finding
-    const itemToPlace: GridItem = {
-      ...item,
-      w: Math.max(MIN_SIZE, targetW),
-      h: Math.max(MIN_SIZE, targetH),
-      isAnimating: true,
-    };
-    
-    // Find the best position using a more systematic approach
-    let bestPosition = null;
-    let bestY = Infinity;
-    let bestX = Infinity;
-    
-    // Try to place the item starting from top-left, scanning row by row
-    for (let y = 0; y <= gridDimensions.rows - itemToPlace.h; y++) {
-      for (let x = 0; x <= gridDimensions.cols - itemToPlace.w; x++) {
-        const candidateItem = { ...itemToPlace, x, y };
-        
-        // Check if this position is valid (no overlaps with already placed items)
-        const isValid = !organized.some(placedItem => 
-          itemsOverlap(candidateItem, placedItem)
-        );
-        
-        if (isValid) {
-          // This position works - check if it's better than our current best
-          if (y < bestY || (y === bestY && x < bestX)) {
-            bestPosition = { x, y };
-            bestY = y;
-            bestX = x;
-            break; // Found the leftmost position in this row
+  const autoOrganize = () => {
+    if (!isEditMode) return;
+
+    // Sort by area (largest first) then by ID for consistent ordering
+    const sorted = [...items].sort((a, b) => {
+      const aArea = (a.originalW ?? a.w) * (a.originalH ?? a.h);
+      const bArea = (b.originalW ?? b.w) * (b.originalH ?? b.h);
+      return bArea - aArea || parseInt(a.id) - parseInt(b.id);
+    });
+
+    const organized: GridItem[] = [];
+
+    // Process each item to find the best position
+    for (const item of sorted) {
+      // Use original dimensions if available, but clamp to current grid
+      const targetW = Math.min(
+        item.originalW ?? item.w,
+        gridDimensions.cols
+      );
+      const targetH = item.originalH ?? item.h;
+
+      // Create a temporary item for position finding
+      const itemToPlace: GridItem = {
+        ...item,
+        w: Math.max(MIN_SIZE, targetW),
+        h: Math.max(MIN_SIZE, targetH),
+        isAnimating: true,
+      };
+
+      // Find the best position using a more systematic approach
+      let bestPosition = null;
+      let bestY = Infinity;
+      let bestX = Infinity;
+
+      // Try to place the item starting from top-left, scanning row by row
+      for (let y = 0; y <= gridDimensions.rows - itemToPlace.h; y++) {
+        for (let x = 0; x <= gridDimensions.cols - itemToPlace.w; x++) {
+          const candidateItem = { ...itemToPlace, x, y };
+
+          // Check if this position is valid (no overlaps with already placed items)
+          const isValid = !organized.some(placedItem =>
+            itemsOverlap(candidateItem, placedItem)
+          );
+
+          if (isValid) {
+            // This position works - check if it's better than our current best
+            if (y < bestY || (y === bestY && x < bestX)) {
+              bestPosition = { x, y };
+              bestY = y;
+              bestX = x;
+              break; // Found the leftmost position in this row
+            }
           }
         }
+        if (bestPosition && bestY === y) break; // Found position in this row
       }
-      if (bestPosition && bestY === y) break; // Found position in this row
+
+      if (bestPosition) {
+        // Use the best position we found
+        const organizedItem: GridItem = {
+          ...item,
+          x: bestPosition.x,
+          y: bestPosition.y,
+          w: itemToPlace.w,
+          h: itemToPlace.h,
+          originalX: bestPosition.x,
+          originalY: bestPosition.y,
+          originalW: itemToPlace.w,
+          originalH: itemToPlace.h,
+          isAnimating: true,
+        };
+        organized.push(organizedItem);
+      } else {
+        // Fallback: use findSafePosition if no position found
+        const safePositionData = findSafePosition(itemToPlace, organized, false);
+        const organizedItem: GridItem = {
+          ...item,
+          x: safePositionData.x,
+          y: safePositionData.y,
+          w: safePositionData.w,
+          h: safePositionData.h,
+          originalX: safePositionData.x,
+          originalY: safePositionData.y,
+          originalW: safePositionData.w,
+          originalH: safePositionData.h,
+          isAnimating: true,
+        };
+        organized.push(organizedItem);
+      }
     }
-    
-    if (bestPosition) {
-      // Use the best position we found
-      const organizedItem: GridItem = {
-        ...item,
-        x: bestPosition.x,
-        y: bestPosition.y,
-        w: itemToPlace.w,
-        h: itemToPlace.h,
-        originalX: bestPosition.x,
-        originalY: bestPosition.y,
-        originalW: itemToPlace.w,
-        originalH: itemToPlace.h,
-        isAnimating: true,
-      };
-      organized.push(organizedItem);
-    } else {
-      // Fallback: use findSafePosition if no position found
-      const safePositionData = findSafePosition(itemToPlace, organized, false);
-      const organizedItem: GridItem = {
-        ...item,
-        x: safePositionData.x,
-        y: safePositionData.y,
-        w: safePositionData.w,
-        h: safePositionData.h,
-        originalX: safePositionData.x,
-        originalY: safePositionData.y,
-        originalW: safePositionData.w,
-        originalH: safePositionData.h,
-        isAnimating: true,
-      };
-      organized.push(organizedItem);
-    }
-  }
-  
-  // Apply the organized layout
-  setItems(organized);
-  
-  // Remove animation flag after animation completes
-  setTimeout(() => {
-    setItems(prev => prev.map(item => ({ ...item, isAnimating: false })));
-  }, ANIMATION_DURATION);
-};
+
+    // Apply the organized layout
+    setItems(organized);
+
+    // Remove animation flag after animation completes
+    setTimeout(() => {
+      setItems(prev => prev.map(item => ({ ...item, isAnimating: false })));
+    }, ANIMATION_DURATION);
+  };
 
 
-  const renderItem = (item: GridItem, isPreview = false) => { 
+  const renderItem = (item: GridItem, isPreview = false) => {
     const pos = gridToPixel(item.x, item.y);
     // Ensure width/height are at least 0 to prevent style errors if item.w/h somehow become negative during processing
     const itemWidth = Math.max(0, item.w);
@@ -777,18 +805,18 @@ const autoOrganize = () => {
     const handleMouseDownOnWidget = (e: React.MouseEvent) => {
       if (!isEditMode || isPreview) return;
       e.preventDefault();
-      
+
       const rect = e.currentTarget.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
+
       // Define corner areas (20px from each edge)
       const cornerSize = 20;
       const isInTopLeft = mouseX <= cornerSize && mouseY <= cornerSize;
       const isInTopRight = mouseX >= rect.width - cornerSize && mouseY <= cornerSize;
       const isInBottomLeft = mouseX <= cornerSize && mouseY >= rect.height - cornerSize;
       const isInBottomRight = mouseX >= rect.width - cornerSize && mouseY >= rect.height - cornerSize;
-      
+
       if (isInTopLeft || isInTopRight || isInBottomLeft || isInBottomRight) {
         // Handle resize
         let handle = '';
@@ -796,9 +824,9 @@ const autoOrganize = () => {
         else if (isInTopRight) handle = 'ne';
         else if (isInBottomLeft) handle = 'sw';
         else if (isInBottomRight) handle = 'se';
-        
+
         const gridContentRect = containerRef.current?.getBoundingClientRect();
-        if(!gridContentRect) return;
+        if (!gridContentRect) return;
 
         setResizeState({
           id: item.id,
@@ -812,14 +840,14 @@ const autoOrganize = () => {
         // Handle drag from header area
         const gridContentRect = containerRef.current?.getBoundingClientRect();
         if (!gridContentRect) return;
-        
+
         // Calculate mouse position relative to grid content area
         const mouseXInGridContent = e.clientX - gridContentRect.left - CONTAINER_PADDING;
         const mouseYInGridContent = e.clientY - gridContentRect.top - CONTAINER_PADDING;
-        
+
         // Calculate the item's current pixel position
         const itemPixelPos = gridToPixel(item.x, item.y);
-        
+
         // Store the offset from mouse to item's top-left corner (both in grid content coordinates)
         setDragState({
           id: item.id,
@@ -834,7 +862,7 @@ const autoOrganize = () => {
     return (
       <div
         key={`${isPreview ? 'preview-' : ''}${item.id}`}
-        className={`group absolute rounded-lg border ${ item.isAnimating || isPreview ? 'transition-all duration-300' : ''} ${ isPreview ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600 border-2 opacity-80 z-50' : `bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl dark:shadow-gray-900/50 z-10 ${isActive && !isPreview ? 'opacity-50' : ''}`} ${isEditMode && !isPreview ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
+        className={`group absolute rounded-lg border ${item.isAnimating || isPreview ? 'transition-all duration-300' : ''} ${isPreview ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600 border-2 opacity-80 z-50' : `bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl dark:shadow-gray-900/50 z-10 ${isActive && !isPreview ? 'opacity-50' : ''}`} ${isEditMode && !isPreview ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
         style={{ left: pos.x, top: pos.y, width: size.width, height: size.height }}
         onMouseDown={handleMouseDownOnWidget}
       >
@@ -847,9 +875,9 @@ const autoOrganize = () => {
             <div className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize z-20" />
           </>
         )}
-        
-        <div 
-          className={`flex items-center justify-between p-2 text-xs border-b select-none ${ isPreview ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-200 dark:border-blue-700' : 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 border-gray-200 dark:border-gray-700 hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-600 dark:hover:to-gray-600'}`}
+
+        <div
+          className={`flex items-center justify-between p-2 text-xs border-b select-none ${isPreview ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-200 dark:border-blue-700' : 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 border-gray-200 dark:border-gray-700 hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-600 dark:hover:to-gray-600'}`}
         >
           <span className={`font-medium truncate ${isPreview ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>
             {item.title}
@@ -861,53 +889,22 @@ const autoOrganize = () => {
             </div>
           )}
         </div>
-        <div className="p-1 flex items-center justify-center h-[calc(100%-30px)] overflow-hidden"> 
-          {item.content()}
+        <div className="p-1 flex items-center justify-center h-[calc(100%-30px)] overflow-hidden">
+          {item.content ? item.content() : null}
         </div>
       </div>
     );
   };
 
+  /*
   useEffect(() => {
     const validateAndFixItems = () => {
-      if (items.length === 0 || dragState || resizeState || preview) return; 
-      
-      let needsFixing = false;
-      const tempItems = items.map(i => ({...i})); // Operate on a copy for checks
-
-      for (let i = 0; i < tempItems.length; i++) {
-        // Check if item itself is valid within current grid dimensions
-        if (tempItems[i].x < 0 || tempItems[i].y < 0 ||
-            tempItems[i].x + tempItems[i].w > gridDimensions.cols ||
-            tempItems[i].y + tempItems[i].h > gridDimensions.rows ||
-            tempItems[i].w < MIN_SIZE || tempItems[i].h < MIN_SIZE ) {
-            needsFixing = true; 
-            console.warn(`Item ${tempItems[i].id} out of bounds or too small. x:${tempItems[i].x} y:${tempItems[i].y} w:${tempItems[i].w} h:${tempItems[i].h} vs cols:${gridDimensions.cols} rows:${gridDimensions.rows}`);
-            break;
-        }
-        // Check for overlaps with other items
-        for (let j = i + 1; j < tempItems.length; j++) {
-          if (itemsOverlap(tempItems[i], tempItems[j])) {
-            needsFixing = true; 
-            console.warn(`Items ${tempItems[i].id} and ${tempItems[j].id} overlap.`);
-            break;
-          }
-        }
-        if(needsFixing) break;
-      }
-      
-      if (needsFixing) {
-        const fixedItems = detectAndFixOverlaps(items.map(i => ({...i, isAnimating: true})), true); 
-        
-        if (JSON.stringify(fixedItems.map(({isAnimating, ...rest}) => rest)) !== JSON.stringify(items.map(({isAnimating, ...rest}) => rest))) {
-            setItems(fixedItems);
-            setTimeout(() => setItems(prev => prev.map(it => ({ ...it, isAnimating: false }))), ANIMATION_DURATION);
-        }
-      }
+      // ... validation logic commented out to prevent infinite loop ...
     };
-    const timeoutId = setTimeout(validateAndFixItems, DEBOUNCE_DELAY + 50); 
-    return () => clearTimeout(timeoutId);
-  }, [JSON.stringify(items.map(({isAnimating, ...rest})=>rest)), gridDimensions.cols, gridDimensions.rows, dragState, resizeState, preview]);
+    // const timeoutId = setTimeout(validateAndFixItems, DEBOUNCE_DELAY + 50);
+    // return () => clearTimeout(timeoutId);
+  }, [JSON.stringify(items.map(({ isAnimating, ...rest }) => rest)), gridDimensions.cols, gridDimensions.rows, dragState, resizeState, preview]);
+  */
 
   // Create dashboard actions object for custom toolbars
   const dashboardActions: DashboardActions = {
@@ -940,7 +937,7 @@ const autoOrganize = () => {
   const renderElegantGrid = () => (
     <>
       {/* Light mode elegant grid */}
-      <div 
+      <div
         className="absolute pointer-events-none opacity-20"
         style={{
           top: CONTAINER_PADDING, left: CONTAINER_PADDING,
@@ -952,9 +949,9 @@ const autoOrganize = () => {
           backgroundSize: `${CELL_SIZE}px ${CELL_SIZE}px`,
         }}
       />
-      
+
       {/* Dark mode elegant grid */}
-      <div 
+      <div
         className="absolute pointer-events-none dark:block hidden opacity-15"
         style={{
           top: CONTAINER_PADDING, left: CONTAINER_PADDING,
@@ -970,7 +967,7 @@ const autoOrganize = () => {
   );
 
   const renderDotsGrid = () => (
-    <div 
+    <div
       className="absolute pointer-events-none opacity-30 dark:opacity-20"
       style={{
         top: CONTAINER_PADDING, left: CONTAINER_PADDING,
@@ -980,13 +977,13 @@ const autoOrganize = () => {
           radial-gradient(circle at center, rgba(75, 85, 99, 0.5) 1px, transparent 1px)
         `,
         backgroundSize: `${CELL_SIZE}px ${CELL_SIZE}px`,
-        backgroundPosition: `${CELL_SIZE/2}px ${CELL_SIZE/2}px`,
+        backgroundPosition: `${CELL_SIZE / 2}px ${CELL_SIZE / 2}px`,
       }}
     />
   );
 
   const renderHarshGrid = () => (
-    <div 
+    <div
       className="absolute opacity-20 dark:opacity-10 pointer-events-none"
       style={{
         top: CONTAINER_PADDING, left: CONTAINER_PADDING,
@@ -1019,24 +1016,24 @@ const autoOrganize = () => {
       {/* Conditional toolbar rendering */}
       {showDefaultToolbar && !customToolbar && (
         <DashboardToolbar
-          isEditMode={isEditMode} 
-          onToggleMode={toggleEditMode} 
+          isEditMode={isEditMode}
+          onToggleMode={toggleEditMode}
           onAutoOrganize={autoOrganize}
           onToggleFixedHeight={toggleFixedHeight}
-          isFixedHeight={maxHeight !== null} 
-          gridDimensions={gridDimensions} 
+          isFixedHeight={maxHeight !== null}
+          gridDimensions={gridDimensions}
           itemCount={items.length}
-          isAddWidgetMode={isAddWidgetMode} 
-          onToggleAddWidgetMode={toggleAddWidgetMode} 
+          isAddWidgetMode={isAddWidgetMode}
+          onToggleAddWidgetMode={toggleAddWidgetMode}
           onAddWidget={addWidgetAtPosition}
           availableWidgetTypes={availableWidgetTypes}
         />
       )}
-      
+
       {/* Custom toolbar */}
       {customToolbar && (
         <div className={toolbarClassName}>
-          {React.isValidElement(customToolbar) 
+          {React.isValidElement(customToolbar)
             ? customToolbar
             : React.createElement(customToolbar as React.ComponentType<CustomToolbarProps>, customToolbarProps)
           }
@@ -1044,20 +1041,20 @@ const autoOrganize = () => {
       )}
 
       <div className="w-full">
-        <div 
+        <div
           ref={containerRef}
           className={`relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg w-full ${maxHeight ? 'overflow-auto' : 'overflow-hidden'}`}
           style={{ height: gridDimensions.height, minHeight: MIN_CONTAINER_HEIGHT, padding: CONTAINER_PADDING }}
         >
           {renderGrid()}
-          <div 
-            className="relative w-full" 
-            style={{ height: Math.max(0, gridDimensions.rows * CELL_SIZE - MARGIN), minHeight: `calc(100% - ${CONTAINER_PADDING * 2}px)`}}
+          <div
+            className="relative w-full"
+            style={{ height: Math.max(0, gridDimensions.rows * CELL_SIZE - MARGIN), minHeight: `calc(100% - ${CONTAINER_PADDING * 2}px)` }}
           >
             {items.map(item => renderItem(item))}
             {preview && renderItem(preview, true)}
-          
-            {items.length === 0 && !isAddWidgetMode && ( 
+
+            {items.length === 0 && !isAddWidgetMode && (
               <div className="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-500">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">

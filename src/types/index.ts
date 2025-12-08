@@ -1,3 +1,4 @@
+import React from 'react';
 
 export interface GridItem {
   id: string;
@@ -7,7 +8,7 @@ export interface GridItem {
   h: number;
   type: string;
   title: string;
-  content: () => React.ReactNode;
+  content?: () => React.ReactNode;
   isAnimating?: boolean;
   originalX?: number;
   originalY?: number;
@@ -29,8 +30,8 @@ export interface WidgetType {
   title: string;
   icon: React.ReactNode;
   defaultSize: {
-      w: number;
-      h: number;
+    w: number;
+    h: number;
   };
   description: string;
   component: React.ComponentType<any>;
@@ -50,14 +51,39 @@ export interface DashboardState {
   isAddWidgetMode: boolean;
   isFixedHeight: boolean;
   gridDimensions: {
-      width: number;
-      height: number;
-      cols: number;
-      rows: number;
+    width: number;
+    height: number;
+    cols: number;
+    rows: number;
   };
   itemCount: number;
   items: GridItem[];
 }
+
+export interface SerializedDashboard {
+  items: Omit<GridItem, 'content'>[];
+}
+
+export interface DashboardController {
+  items: GridItem[];
+  addItem: (item: GridItem) => void;
+  removeItem: (id: string) => void;
+  updateItem: (id: string, updates: Partial<GridItem>) => void;
+  setItems: (items: GridItem[] | ((prev: GridItem[]) => GridItem[])) => void;
+  save: () => SerializedDashboard;
+  load: (state: SerializedDashboard) => void;
+  clear: () => void;
+  // State for UI
+  isEditMode: boolean;
+  toggleEditMode: () => void;
+  setEditMode: (enabled: boolean) => void;
+}
+
+export interface UseDashboardControllerOptions {
+  initialItems?: GridItem[];
+  initialEditMode?: boolean;
+}
+
 export interface CustomToolbarProps {
   state: DashboardState;
   actions: DashboardActions;
@@ -78,6 +104,7 @@ export interface DashboardProps {
   onEditModeChange?: (isEditMode: boolean) => void;
   onAddWidgetModeChange?: (isAddWidgetMode: boolean) => void;
   onFixedHeightChange?: (isFixedHeight: boolean) => void;
+  controller?: DashboardController;
 }
 export interface DashboardToolbarProps {
   isEditMode: boolean;
@@ -86,10 +113,10 @@ export interface DashboardToolbarProps {
   onToggleFixedHeight: () => void;
   isFixedHeight: boolean;
   gridDimensions: {
-      width: number;
-      height: number;
-      cols: number;
-      rows: number;
+    width: number;
+    height: number;
+    cols: number;
+    rows: number;
   };
   itemCount: number;
   isAddWidgetMode?: boolean;
@@ -114,9 +141,9 @@ export interface ProgressBarWidgetProps {
 export interface PieChartData {
   label: string;
   segments: Array<{
-      name: string;
-      value: number;
-      color: string;
+    name: string;
+    value: number;
+    color: string;
   }>;
 }
 export interface PieChartWidgetProps {
@@ -125,9 +152,9 @@ export interface PieChartWidgetProps {
 export interface BarChartData {
   label: string;
   data: Array<{
-      name: string;
-      value: number;
-      color?: string;
+    name: string;
+    value: number;
+    color?: string;
   }>;
 }
 export interface BarChartWidgetProps {
@@ -136,8 +163,8 @@ export interface BarChartWidgetProps {
 export interface LineChartData {
   label: string;
   data: Array<{
-      name: string;
-      value: number;
+    name: string;
+    value: number;
   }>;
   color?: string;
 }
