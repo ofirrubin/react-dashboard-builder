@@ -1,12 +1,14 @@
 "use client"
 
-import { createContext, useContext, useState, useRef, useEffect } from "react"
+import { createContext, useContext, useState, useRef, useEffect, useLayoutEffect } from "react"
+import { createPortal } from "react-dom"
 import { cn } from "../lib/utils"
 
 interface TooltipContextValue {
   open: boolean
   setOpen: (open: boolean) => void
   delay: number
+  triggerRef: React.RefObject<HTMLDivElement>
 }
 
 const TooltipContext = createContext<TooltipContextValue | undefined>(undefined)
@@ -26,10 +28,13 @@ interface TooltipProps {
 
 export function Tooltip({ children, delayDuration = 200 }: TooltipProps) {
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLDivElement>(null)
 
   return (
-    <TooltipContext.Provider value={{ open, setOpen, delay: delayDuration }}>
-      {children}
+    <TooltipContext.Provider value={{ open, setOpen, delay: delayDuration, triggerRef }}>
+      <div ref={triggerRef} className="relative inline-block">
+        {children}
+      </div>
     </TooltipContext.Provider>
   )
 }
@@ -87,33 +92,77 @@ interface TooltipContentProps {
 
 export function TooltipContent({ className, sideOffset = 4, side = "top", children, ...props }: TooltipContentProps) {
   const context = useContext(TooltipContext)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [position, setPosition] = useState({ top: 0, left: 0 })
+  // Use state to force re-render if we need to flip styles, though we mostly use position
+
   if (!context) throw new Error("TooltipContent must be used within Tooltip")
 
-  const { open } = context
+  const { open, triggerRef } = context
+
+  useLayoutEffect(() => {
+    if (open && triggerRef.current && contentRef.current) {
+      const updatePosition = () => {
+        const triggerRect = triggerRef.current!.getBoundingClientRect()
+        const contentRect = contentRef.current!.getBoundingClientRect()
+        const scrollY = window.scrollY
+        const scrollX = window.scrollX
+
+        let top = 0
+        let left = 0
+
+        // Calculate center Left
+        left = triggerRect.left + scrollX + (triggerRect.width / 2) - (contentRect.width / 2)
+
+        // Calculate Top (defaulting to 'top' side logic for now as requested)
+        // Default: Place above
+        top = triggerRect.top + scrollY - contentRect.height - sideOffset
+
+        // Flip logic: If top goes off screen (including scroll), move to bottom
+        // We check against the viewport relative top (triggerRect.top)
+        if (triggerRect.top - contentRect.height - sideOffset < 0) {
+          // Place below
+          top = triggerRect.bottom + scrollY + sideOffset
+        }
+
+        setPosition({ top, left })
+      }
+
+      updatePosition()
+      // Optional: Listen to window resize/scroll to update position
+      window.addEventListener('resize', updatePosition)
+      window.addEventListener('scroll', updatePosition, true)
+
+      return () => {
+        window.removeEventListener('resize', updatePosition)
+        window.removeEventListener('scroll', updatePosition, true)
+      }
+    }
+  }, [open, sideOffset]) // removing 'side' dep since we simplify to top/bottom flip for this specific fix
 
   if (!open) return null
 
-  const sideClasses: Record<string, string> = {
-    top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
-    bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
-    left: "right-full top-1/2 -translate-y-1/2 mr-2",
-    right: "left-full top-1/2 -translate-y-1/2 ml-2",
-  }
-
-  return (
+  return createPortal(
     <div
+      ref={contentRef}
+      style={{
+        top: position.top,
+        left: position.left,
+        position: 'absolute', // Using absolute relative to body (with scroll values included)
+      }}
       className={cn(
-        "absolute z-50 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700",
+        "z-50 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700",
         "bg-white dark:bg-gray-800 px-3 py-1.5 text-sm",
         "text-gray-900 dark:text-gray-100 shadow-lg dark:shadow-gray-900/50",
         "animate-in fade-in-0 zoom-in-95 duration-200",
-        sideClasses[side],
+        "whitespace-nowrap pointer-events-none", // pointer-events-none prevents flickering if tooltip covers trigger
         className
       )}
       {...props}
     >
       {children}
-    </div>
+    </div>,
+    document.body
   )
 }
 
