@@ -1,5 +1,5 @@
 import { Dashboard, useDashboardController } from 'react-dashboard-builder';
-import 'react-dashboard-builder/dist/index.css';
+// import 'react-dashboard-builder/dist/index.css';
 
 const widgetType = {
   id: 'basic',
@@ -10,8 +10,8 @@ const widgetType = {
   defaultSize: { w: 4, h: 4 },
   component: ({ title }: any) => (
     <div className="w-full h-full p-4 bg-white dark:bg-gray-800 rounded shadow">
-      <h3 className="font-bold">{title}</h3>
-      <p>Simple content</p>
+      <h3 className="font-bold text-gray-800 dark:text-gray-200">{title}</h3>
+      <p className="text-gray-600 dark:text-gray-400">Simple content</p>
     </div>
   ),
   preview: () => <div>Preview</div>
