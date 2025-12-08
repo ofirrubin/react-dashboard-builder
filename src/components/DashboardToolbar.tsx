@@ -80,7 +80,7 @@ export function DashboardToolbar({
                   </>
                 )}
               </Button>
-              <div className="text-sm text-gray-500 dark:text-gray-400 px-2">
+              <div className="text-sm text-gray-500 dark:text-gray-200 px-2">
                 Grid: {gridDimensions.cols}×{gridDimensions.rows}
               </div>
             </div>
@@ -125,7 +125,7 @@ export function DashboardToolbar({
                   variant="outline"
                   size="sm"
                   disabled={itemCount === 0}
-                  className="gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800"
+                  className="gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800"
                 >
                   <Zap size={16} />
                   Auto Organize
@@ -139,7 +139,7 @@ export function DashboardToolbar({
         {isEditMode && isAddWidgetMode && (
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="font-medium text-gray-800 dark:text-gray-100">Select a widget to add:</h3>
+              <h3 className="font-medium text-gray-800 dark:text-gray-200">Select a widget to add:</h3>
             </div>
 
             <div className="relative">
@@ -185,15 +185,15 @@ export function DashboardToolbar({
                                 {widget.icon}
                               </div>
                               <div>
-                                <h4 className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                                <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">
                                   {widget.title}
                                 </h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                <p className="text-xs text-gray-500 dark:text-gray-200">
                                   Size: {widget.defaultSize.w}×{widget.defaultSize.h}
                                 </p>
                               </div>
                             </div>
-                            <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                            <p className="text-xs text-gray-600 dark:text-gray-200 mb-3">
                               {widget.description}
                             </p>
                             <div className="h-16 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-750">
