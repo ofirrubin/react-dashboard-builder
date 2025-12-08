@@ -1,12 +1,3 @@
-// export interface WidgetType {
-//     id: string;
-//     type: string;
-//     title: string;
-//     icon: React.ReactNode;
-//     defaultSize: { w: number; h: number };
-//     description: string;
-//   }
-
 export interface WidgetType {
     id: string;
     type: string;

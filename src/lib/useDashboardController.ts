@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { GridItem, SerializedDashboard, DashboardController, UseDashboardControllerOptions } from '../types';
+import { GridItem, SerializedDashboard, DashboardController, UseDashboardControllerOptions } from '../types/shared';
 
 export function useDashboardController({
     initialItems = [],

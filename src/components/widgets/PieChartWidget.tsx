@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface PieChartData {
   label: string;
   segments: Array<{

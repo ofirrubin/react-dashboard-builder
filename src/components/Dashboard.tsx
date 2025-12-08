@@ -1,15 +1,16 @@
 "use client";
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import * as React from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Plus, X, MoreHorizontal } from 'lucide-react';
 import { DashboardToolbar } from './DashboardToolbar';
 import { getWidgetComponent } from './widgets';
 import { useDashboardController } from '../lib/useDashboardController';
-import { GridItem, DragState, ResizeState, DashboardProps, WidgetType, DashboardActions, DashboardState, CustomToolbarProps } from '../types';
+import { GridItem, DragState, ResizeState, DashboardProps, WidgetType, DashboardActions, DashboardState, CustomToolbarProps } from '../types/index';
 import { GRID_SIZE, MARGIN, CELL_SIZE, ANIMATION_DURATION, MIN_SIZE, MAX_SIZE, CONTAINER_PADDING, MIN_CONTAINER_HEIGHT, DEBOUNCE_DELAY } from '../constants';
 
 
-const createWidgetRenderer = (widgetRegistry?: Record<string, React.ComponentType<any>>) => (item: GridItem) => {
-  let WidgetComponent;
+const createWidgetRenderer = (widgetRegistry?: Record<string, any>) => (item: GridItem) => {
+  let WidgetComponent: any;
 
   if (widgetRegistry && widgetRegistry[item.type]) {
     WidgetComponent = widgetRegistry[item.type];
@@ -465,35 +466,35 @@ export default function Dashboard({
     return { ...item, x: 0, y: 0, w: finalW, h: finalH, isAnimating: true };
   };
 
-  const resolveOverlaps = (currentItems: GridItem[], movedId: string) => {
-    let updatedItems = currentItems.map(i => ({ ...i }));
-    const movedItem = updatedItems.find(i => i.id === movedId);
-    if (!movedItem) {
-      return updatedItems;
-    }
+  // const resolveOverlaps = (currentItems: GridItem[], movedId: string) => {
+  //   let updatedItems = currentItems.map(i => ({ ...i }));
+  //   const movedItem = updatedItems.find(i => i.id === movedId);
+  //   if (!movedItem) {
+  //     return updatedItems;
+  //   }
 
-    const itemsToPotentiallyMove = updatedItems.filter(item => item.id !== movedId && itemsOverlap(item, movedItem));
+  //   const itemsToPotentiallyMove = updatedItems.filter(item => item.id !== movedId && itemsOverlap(item, movedItem));
 
-    for (const item of itemsToPotentiallyMove) {
-      const otherItems = updatedItems.filter(other => other.id !== item.id);
-      const safePositionData = findSafePosition(item, otherItems, true);
+  //   for (const item of itemsToPotentiallyMove) {
+  //     const otherItems = updatedItems.filter(other => other.id !== item.id);
+  //     const safePositionData = findSafePosition(item, otherItems, true);
 
-      const itemIndex = updatedItems.findIndex(i => i.id === item.id);
-      if (itemIndex !== -1) {
-        updatedItems[itemIndex] = {
-          ...updatedItems[itemIndex],
-          x: safePositionData.x,
-          y: safePositionData.y,
-          w: safePositionData.w,
-          h: safePositionData.h,
-          isAnimating: true,
-        };
-      }
-    }
-    const finalResult = detectAndFixOverlaps(updatedItems, true);
-    setTimeout(() => setItems(prev => prev.map(it => ({ ...it, isAnimating: false }))), ANIMATION_DURATION);
-    return finalResult;
-  };
+  //     const itemIndex = updatedItems.findIndex(i => i.id === item.id);
+  //     if (itemIndex !== -1) {
+  //       updatedItems[itemIndex] = {
+  //         ...updatedItems[itemIndex],
+  //         x: safePositionData.x,
+  //         y: safePositionData.y,
+  //         w: safePositionData.w,
+  //         h: safePositionData.h,
+  //         isAnimating: true,
+  //       };
+  //     }
+  //   }
+  //   const finalResult = detectAndFixOverlaps(updatedItems, true);
+  //   setTimeout(() => setItems(prev => prev.map(it => ({ ...it, isAnimating: false }))), ANIMATION_DURATION);
+  //   return finalResult;
+  // };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const gridContentRect = containerRef.current?.getBoundingClientRect();
@@ -552,8 +553,8 @@ export default function Dashboard({
 
   const handleMouseUp = useCallback(() => {
     if ((dragState || resizeState) && preview) {
-      const activeId = dragState?.id || resizeState?.id || '';
-      const actionType = dragState ? 'drag' : 'resize';
+      // const activeId = dragState?.id || resizeState?.id || '';
+      // const actionType = dragState ? 'drag' : 'resize';
 
       // Clamp final preview values to be safe
       const finalX = Math.max(0, Math.min(preview.x, gridDimensions.cols - MIN_SIZE));
@@ -802,7 +803,7 @@ export default function Dashboard({
     const isActive = dragState?.id === item.id || resizeState?.id === item.id;
 
     // Handle mouse down for both dragging and resizing
-    const handleMouseDownOnWidget = (e: React.MouseEvent) => {
+    const handleMouseDownOnWidget = (e: any) => {
       if (!isEditMode || isPreview) return;
       e.preventDefault();
 

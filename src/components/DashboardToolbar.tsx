@@ -148,7 +148,7 @@ export function DashboardToolbar({
                   variant="outline"
                   size="sm"
                   onClick={() => scroll('left')}
-                  className="flex-shrink-0 h-12 w-8"
+                  className="flex-shrink-0 h-12 w-8 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
                   disabled={scrollPosition === 0}
                 >
                   <ChevronLeft size={16} />
@@ -196,7 +196,7 @@ export function DashboardToolbar({
                             <p className="text-xs text-gray-600 dark:text-gray-200 mb-3">
                               {widget.description}
                             </p>
-                            <div className="h-16 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-750">
+                            <div className="h-16 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-750 overflow-hidden">
                               <PreviewComponent />
                             </div>
                           </div>
@@ -210,7 +210,7 @@ export function DashboardToolbar({
                   variant="outline"
                   size="sm"
                   onClick={() => scroll('right')}
-                  className="flex-shrink-0 h-12 w-8"
+                  className="flex-shrink-0 h-12 w-8 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
                 >
                   <ChevronRight size={16} />
                 </Button>

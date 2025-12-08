@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface ProgressBarData {
   label: string;
   value: number;

@@ -1,66 +1,89 @@
 {
   "name": "react-dashboard-builder",
-  "version": "0.1.3",
-  "description": "A flexible, drag-and-drop dashboard builder component for React",
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
-  "types": "dist/index.d.ts",
+  "version": "0.1.4",
+  "author": "Ofir Rubin",
+  "description": "A component made simple",
+  "type": "module",
+  "main": "./dist/react/index.cjs",
+  "module": "./dist/react/index.js",
+  "types": "./dist/react/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js",
+      "require": "./dist/react/index.cjs"
+    },
+    "./preact": {
+      "types": "./dist/preact/index.preact.d.ts",
+      "import": "./dist/preact/index.preact.js",
+      "require": "./dist/preact/index.preact.cjs"
+    },
+    "./tailwind.preset": "./tailwind.preset.js",
+    "./styles.css": "./dist/styles.css"
+  },
   "files": [
-    "dist"
+    "dist",
+    "tailwind.preset.js"
   ],
   "scripts": {
-    "build": "rollup -c rollup.config.mjs",
-    "dev": "rollup -c rollup.config.mjs -w",
-    "prepare": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "tsup && cp src/styles.css dist/styles.css",
+    "pack:local": "bun run build && bun pm pack",
+    "preview": "vite preview",
+    "test:react": "vite --config vite.test-react.config.ts",
+    "test:preact": "vite --config vite.test-preact.config.ts"
   },
-  "keywords": [
-    "react",
-    "dashboard",
-    "grid",
-    "drag-drop",
-    "widgets",
-    "builder",
-    "typescript"
-  ],
-  "author": "Ofir Rubin",
-  "license": "MIT",
   "peerDependencies": {
-    "react": ">=16.8.0",
-    "react-dom": ">=16.8.0"
+    "preact": "^10.0.0",
+    "react": "^18.0.0 || ^17.0.0",
+    "react-dom": "^18.0.0 || ^17.0.0"
+  },
+  "peerDependenciesMeta": {
+    "preact": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
   },
   "dependencies": {
-    "@radix-ui/react-tooltip": "^1.2.7",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.263.1",
-    "tailwind-merge": "^3.3.0"
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "lucide-react": "^0.344.0",
+    "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^25.0.4",
-    "@rollup/plugin-node-resolve": "^15.2.1",
-    "@rollup/plugin-typescript": "^11.1.3",
-    "@tailwindcss/postcss": "^4.1.17",
-    "@types/react": "^18.2.21",
-    "@types/react-dom": "^18.2.7",
-    "autoprefixer": "^10.4.22",
-    "postcss": "^8.5.6",
+    "@preact/preset-vite": "^2.8.0",
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "preact": "^10.19.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "rollup": "^3.29.2",
-    "rollup-plugin-dts": "^6.0.2",
-    "rollup-plugin-peer-deps-external": "^2.2.4",
-    "rollup-plugin-postcss": "^4.0.2",
-    "tailwindcss": "^4.1.17",
-    "tslib": "^2.8.1",
-    "typescript": "^5.2.2"
+    "tailwindcss": "^3.4.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8"
   },
+  "keywords": [
+    "dashboard",
+    "react",
+    "preact",
+    "dashboard builder",
+    "interactive",
+    "drag and drop"
+  ],
+  "homepage": "https://github.com/ofirrubin/react-dashboard-builder",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ofirrubin/react-dashboard-builder.git"
+    "url": "https://github.com/ofirrubin/react-dashboard-builder.git",
+    "directory": "packages/react-dashboard-builder"
   },
-  "bugs": {
-    "url": "https://github.com/ofirrubin/react-dashboard-builder/issues"
-  },
-  "homepage": "https://github.com/ofirrubin/react-dashboard-builder#readme"
+  "license": "MIT"
 }

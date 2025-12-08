@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface LineChartData {
   label: string;
   data: Array<{

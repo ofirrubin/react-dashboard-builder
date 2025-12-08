@@ -1,0 +1,10 @@
+# Bun configuration (optional)
+# This ensures Bun uses the correct package manager settings
+
+[install]
+# Use exact versions for reproducibility
+exact = false
+
+[install.scopes]
+# Add any scoped registries here if needed
+
