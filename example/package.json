@@ -10,8 +10,7 @@
   },
   "dependencies": {
     "preact": "^10.19.3",
-    "react-dashboard-builder": "../react-dashboard-builder-0.1.4.tgz",
-    "rud-dashboard": "../rud-dashboard-0.1.0.tgz"
+    "rud-dashboard": "../rud-dashboard-0.1.4.tgz"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.8.0",

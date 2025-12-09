@@ -1,8 +1,8 @@
 {
-  "name": "react-dashboard-builder",
+  "name": "rud-dashboard",
   "version": "0.1.4",
   "author": "Ofir Rubin",
-  "description": "A component made simple",
+  "description": "A flexible dashboard component library with drag-and-drop, resize, and grid layout support for React and Preact",
   "type": "module",
   "main": "./dist/react/index.cjs",
   "module": "./dist/react/index.js",
@@ -62,6 +62,7 @@
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
+    "lucide-preact": "^0.556.0",
     "postcss": "^8.4.32",
     "preact": "^10.19.3",
     "react": "^18.2.0",
@@ -79,11 +80,10 @@
     "interactive",
     "drag and drop"
   ],
-  "homepage": "https://github.com/ofirrubin/react-dashboard-builder",
+  "homepage": "https://github.com/ofirrubin/rud-dashboard",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ofirrubin/react-dashboard-builder.git",
-    "directory": "packages/react-dashboard-builder"
+    "url": "https://github.com/ofirrubin/rud-dashboard.git"
   },
   "license": "MIT"
 }

@@ -8,6 +8,8 @@ export interface GridItem<T = any> {
   type: string;
   title: string;
   content?: () => T;
+  onMenuClick?: (event: any) => void;
+  menuIcon?: T; // Custom icon for the menu button (e.g., Settings, Upload, Trash, etc.)
   isAnimating?: boolean;
   originalX?: number;
   originalY?: number;
@@ -35,6 +37,8 @@ export interface WidgetType<T = any> {
   description: string;
   component: any;
   preview: any;
+  onMenuClick?: (event: any) => void;
+  menuIcon?: T;
 }
 export type GridMode = 'elegant' | 'dots' | 'harsh' | 'blank';
 export interface DashboardActions<T = any> {

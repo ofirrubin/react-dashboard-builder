@@ -28,8 +28,7 @@ export function useDashboardController({
 
     const save = useCallback((): SerializedDashboard => {
         // Strip out non-serializable data (functions)
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const serializedItems = items.map(({ content, ...rest }) => rest);
+        const serializedItems = items.map(({ content: _content, ...rest }) => rest);
         return {
             items: serializedItems,
         };

@@ -36,12 +36,12 @@ export function PieChartWidget({ data }: PieChartWidgetProps) {
   }).join(', ');
 
   return (
-    <div className="p-4 h-full flex flex-col">
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 text-center">
+    <div className="p-4 h-full flex flex-col overflow-hidden">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 text-center flex-shrink-0">
         {widgetData.label}
       </h3>
       
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center min-h-0">
         <div className="relative">
           {/* Pie Chart */}
           <div
@@ -63,11 +63,11 @@ export function PieChartWidget({ data }: PieChartWidgetProps) {
       </div>
 
       {/* Legend */}
-      <div className="grid grid-cols-2 gap-1 mt-4">
+      <div className="grid grid-cols-2 gap-1 mt-2 flex-shrink-0">
         {widgetData.segments.map((segment, index) => (
-          <div key={index} className="flex items-center gap-1">
+          <div key={index} className="flex items-center gap-1 min-w-0">
             <div
-              className="w-2 h-2 rounded-full"
+              className="w-2 h-2 rounded-full flex-shrink-0"
               style={{ backgroundColor: segment.color }}
             />
             <span className="text-xs text-gray-600 dark:text-gray-400 truncate">

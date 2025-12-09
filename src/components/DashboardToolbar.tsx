@@ -66,7 +66,7 @@ export function DashboardToolbar({
                 onClick={onToggleMode}
                 variant={isEditMode ? "default" : "outline"}
                 size="sm"
-                className="gap-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                className="gap-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
               >
                 {isEditMode ? (
                   <>
@@ -104,8 +104,8 @@ export function DashboardToolbar({
                     onClick={onToggleAddWidgetMode}
                     variant="default"
                     size="sm"
-                    className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                  >
+                    className="gap-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    >
                     <Plus size={16} />
                     Add Widget
                   </Button>

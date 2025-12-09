@@ -16,6 +16,7 @@
         "@types/react-dom": "^18.2.18",
         "@vitejs/plugin-react": "^4.2.1",
         "autoprefixer": "^10.4.16",
+        "lucide-preact": "^0.556.0",
         "postcss": "^8.4.32",
         "preact": "^10.19.3",
         "react": "^18.2.0",
@@ -363,6 +364,8 @@
     "loose-envify": ["loose-envify@1.4.0", "", { "dependencies": { "js-tokens": "^3.0.0 || ^4.0.0" }, "bin": "cli.js" }, "sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q=="],
 
     "lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
+
+    "lucide-preact": ["lucide-preact@0.556.0", "", { "peerDependencies": { "preact": "^10.27.2" } }, "sha512-6chaS1vjuObWlNpn6WCTEXzr6B0Q9CTrW9873yupSJk+DvIE0ufJNkAmQpuSU5ceWgiTBRrby06l0J5oQFli9g=="],
 
     "lucide-react": ["lucide-react@0.344.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0" } }, "sha512-6YyBnn91GB45VuVT96bYCOKElbJzUHqp65vX8cDcu55MQL9T969v4dhGClpljamuI/+KMO9P6w9Acq1CVQGvIQ=="],
 

@@ -7,7 +7,7 @@ interface BasicWidgetProps {
 
 export function BasicWidget({ id, title }: BasicWidgetProps) {
   return (
-    <div className="p-4 h-full flex flex-col justify-center">
+    <div className="p-4 h-full flex flex-col justify-center overflow-hidden">
       <div className="text-center">
         <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-700 dark:to-gray-600">
           <Grid size={20} className="text-blue-600 dark:text-gray-200" />

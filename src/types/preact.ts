@@ -5,7 +5,7 @@ import * as Shared from './shared';
 export type GridItem = Shared.GridItem<ComponentChildren>;
 export type DragState = Shared.DragState<ComponentChildren>;
 export type ResizeState = Shared.ResizeState<ComponentChildren>;
-export type WidgetType = Shared.WidgetType<ComponentChildren> & {
+export type WidgetType = Omit<Shared.WidgetType<ComponentChildren>, 'component' | 'preview'> & {
   component: ComponentType<any>;
   preview: ComponentType<any>;
 };

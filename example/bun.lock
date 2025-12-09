@@ -4,9 +4,8 @@
     "": {
       "name": "rud-dashboard-example",
       "dependencies": {
-        "react-dashboard-builder": "../react-dashboard-builder-0.1.4.tgz",
-        "preact": "^10.19.3",
-        "rud-dashboard": "../rud-dashboard-0.1.0.tgz",
+        "rud-dashboard": "../rud-dashboard-0.1.4.tgz",
+        "preact": "^10.19.3"
       },
       "devDependencies": {
         "@preact/preset-vite": "^2.8.0",
@@ -355,7 +354,7 @@
 
     "react": ["react@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ=="],
 
-    "react-dashboard-builder": ["react-dashboard-builder@../react-dashboard-builder-0.1.4.tgz", { "dependencies": { "class-variance-authority": "^0.7.0", "clsx": "^2.1.0", "lucide-react": "^0.344.0", "tailwind-merge": "^2.2.0" }, "peerDependencies": { "preact": "^10.0.0", "react": "^18.0.0 || ^17.0.0", "react-dom": "^18.0.0 || ^17.0.0" }, "optionalPeers": ["preact", "react", "react-dom"] }],
+    "rud-dashboard": ["rud-dashboard@../rud-dashboard-0.1.4.tgz", { "dependencies": { "class-variance-authority": "^0.7.0", "clsx": "^2.1.0", "lucide-react": "^0.344.0", "tailwind-merge": "^2.2.0" }, "peerDependencies": { "preact": "^10.0.0", "react": "^18.0.0 || ^17.0.0", "react-dom": "^18.0.0 || ^17.0.0" }, "optionalPeers": ["preact", "react", "react-dom"] }],
 
     "read-cache": ["read-cache@1.0.0", "", { "dependencies": { "pify": "^2.3.0" } }, "sha512-Owdv/Ft7IjOgm/i0xvNDZ1LrRANRfew4b2prF3OWMQLxLfu3bS8FVhCsrSCMK4lR56Y9ya+AThoTpDCTxCmpRA=="],
 
@@ -366,8 +365,6 @@
     "reusify": ["reusify@1.1.0", "", {}, "sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw=="],
 
     "rollup": ["rollup@4.53.3", "", { "dependencies": { "@types/estree": "1.0.8" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.53.3", "@rollup/rollup-android-arm64": "4.53.3", "@rollup/rollup-darwin-arm64": "4.53.3", "@rollup/rollup-darwin-x64": "4.53.3", "@rollup/rollup-freebsd-arm64": "4.53.3", "@rollup/rollup-freebsd-x64": "4.53.3", "@rollup/rollup-linux-arm-gnueabihf": "4.53.3", "@rollup/rollup-linux-arm-musleabihf": "4.53.3", "@rollup/rollup-linux-arm64-gnu": "4.53.3", "@rollup/rollup-linux-arm64-musl": "4.53.3", "@rollup/rollup-linux-loong64-gnu": "4.53.3", "@rollup/rollup-linux-ppc64-gnu": "4.53.3", "@rollup/rollup-linux-riscv64-gnu": "4.53.3", "@rollup/rollup-linux-riscv64-musl": "4.53.3", "@rollup/rollup-linux-s390x-gnu": "4.53.3", "@rollup/rollup-linux-x64-gnu": "4.53.3", "@rollup/rollup-linux-x64-musl": "4.53.3", "@rollup/rollup-openharmony-arm64": "4.53.3", "@rollup/rollup-win32-arm64-msvc": "4.53.3", "@rollup/rollup-win32-ia32-msvc": "4.53.3", "@rollup/rollup-win32-x64-gnu": "4.53.3", "@rollup/rollup-win32-x64-msvc": "4.53.3", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-w8GmOxZfBmKknvdXU1sdM9NHcoQejwF/4mNgj2JuEEdRaHwwF12K7e9eXn1nLZ07ad+du76mkVsyeb2rKGllsA=="],
-
-    "rud-dashboard": ["rud-dashboard@../rud-dashboard-0.1.0.tgz", { "dependencies": { "class-variance-authority": "^0.7.0", "clsx": "^2.1.0", "lucide-react": "^0.344.0", "tailwind-merge": "^2.2.0" }, "peerDependencies": { "preact": "^10.0.0", "react": "^18.0.0 || ^17.0.0", "react-dom": "^18.0.0 || ^17.0.0" }, "optionalPeers": ["preact", "react", "react-dom"] }],
 
     "run-parallel": ["run-parallel@1.2.0", "", { "dependencies": { "queue-microtask": "^1.2.2" } }, "sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA=="],
 

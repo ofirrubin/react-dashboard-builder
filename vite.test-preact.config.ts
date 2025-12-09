@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import preact from '@preact/preset-vite'
+import { resolve } from 'path'
 
 // Preact playground config
 export default defineConfig({
@@ -15,8 +16,12 @@ export default defineConfig({
   },
   server: {
     port: 3001,
+    open: '/index-preact.html',
   },
   build: {
+    rollupOptions: {
+      input: resolve(__dirname, 'index-preact.html'),
+    },
     outDir: 'dist-preact',
   },
   logLevel: 'info',

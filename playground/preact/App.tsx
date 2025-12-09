@@ -1,73 +1,158 @@
+import { useState } from 'preact/hooks'
 import { Dashboard } from '../../src/index.preact'
-
-// Define available widget types with icons
-const availableWidgets = [
-  {
-    id: 'basic',
-    type: 'basic',
-    title: 'Basic Widget',
-    icon: '📝',
-    defaultSize: { w: 2, h: 1 },
-    description: 'A simple widget for displaying content',
-    component: null,
-    preview: null
-  },
-  {
-    id: 'progress',
-    type: 'progress',
-    title: 'Progress Bar',
-    icon: '📊',
-    defaultSize: { w: 2, h: 1 },
-    description: 'Display progress with a bar',
-    component: null,
-    preview: null
-  },
-  {
-    id: 'pie',
-    type: 'pie',
-    title: 'Pie Chart',
-    icon: '🥧',
-    defaultSize: { w: 2, h: 2 },
-    description: 'Visualize data distribution',
-    component: null,
-    preview: null
-  },
-  {
-    id: 'bar',
-    type: 'bar',
-    title: 'Bar Chart',
-    icon: '📊',
-    defaultSize: { w: 2, h: 2 },
-    description: 'Compare data with bars',
-    component: null,
-    preview: null
-  },
-  {
-    id: 'line',
-    type: 'line',
-    title: 'Line Chart',
-    icon: '📈',
-    defaultSize: { w: 2, h: 2 },
-    description: 'Show trends over time',
-    component: null,
-    preview: null
-  }
-]
+import { Upload, Download, RefreshCw, MoreHorizontal, Edit, Copy, Trash2, Share2 } from 'lucide-preact'
 
 export default function App() {
+  const [showDialog, setShowDialog] = useState<string | null>(null)
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+
+  const showNotification = (message: string) => {
+    setShowDialog(message)
+    setTimeout(() => setShowDialog(null), 2000)
+  }
+
+  const handleBasicWidgetMenu = (e: any) => {
+    e.stopPropagation()
+    const buttonRect = (e.target as HTMLElement).getBoundingClientRect()
+    setDropdownPosition({
+      top: buttonRect.bottom + 5,
+      left: buttonRect.left
+    })
+    setShowDropdown(true)
+  }
+
+  const handleDropdownAction = (action: string) => {
+    showNotification(`${action} clicked for Basic Widget`)
+    setShowDropdown(false)
+  }
+
+  const handleMenuClick = (widgetId: string, action: string) => () => {
+    showNotification(`${action} for ${widgetId}`)
+  }
+
+  // Define available widget types with icons
+  const availableWidgets = [
+    {
+      id: 'basic',
+      type: 'basic',
+      title: 'Basic Widget',
+      icon: '📝',
+      defaultSize: { w: 3, h: 3 },
+      description: 'A simple widget for displaying content',
+      component: null,
+      preview: null,
+      onMenuClick: handleBasicWidgetMenu,
+      menuIcon: <MoreHorizontal size={14} />
+    },
+    {
+      id: 'progress',
+      type: 'progress',
+      title: 'Progress Bar',
+      icon: '📊',
+      defaultSize: { w: 3, h: 3 },
+      description: 'Display progress with a bar',
+      component: null,
+      preview: null
+    },
+    {
+      id: 'pie',
+      type: 'pie',
+      title: 'Pie Chart',
+      icon: '🥧',
+      defaultSize: { w: 2, h: 2 },
+      description: 'Visualize data distribution',
+      component: null,
+      preview: null
+    },
+    {
+      id: 'bar',
+      type: 'bar',
+      title: 'Bar Chart',
+      icon: '📊',
+      defaultSize: { w: 2, h: 2 },
+      description: 'Compare data with bars',
+      component: null,
+      preview: null
+    },
+    {
+      id: 'line',
+      type: 'line',
+      title: 'Line Chart',
+      icon: '📈',
+      defaultSize: { w: 2, h: 2 },
+      description: 'Show trends over time',
+      component: null,
+      preview: null
+    }
+  ]
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            rud-dashboard Example
+            rud-dashboard Preact Example
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Testing the package with Preact + Vite
+            Testing the package with Preact + Vite - Try edit mode to see custom menu icons!
           </p>
         </div>
 
-        <Dashboard 
+        {/* Demo notification */}
+        {showDialog && (
+          <div className="fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+            {showDialog}
+          </div>
+        )}
+
+        {/* Dropdown Menu */}
+        {showDropdown && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowDropdown(false)}
+            />
+            <div
+              className="fixed z-50 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5"
+              style={{ top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px` }}
+            >
+              <div className="py-1">
+                <button
+                  className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => handleDropdownAction('Edit')}
+                >
+                  <Edit size={16} />
+                  <span>Edit Widget</span>
+                </button>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => handleDropdownAction('Duplicate')}
+                >
+                  <Copy size={16} />
+                  <span>Duplicate</span>
+                </button>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => handleDropdownAction('Share')}
+                >
+                  <Share2 size={16} />
+                  <span>Share</span>
+                </button>
+                <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
+                <button
+                  className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  onClick={() => handleDropdownAction('Delete')}
+                >
+                  <Trash2 size={16} />
+                  <span>Delete</span>
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        <Dashboard
           enableEditMode={true}
           defaultEditMode={false}
           gridMode="elegant"
@@ -77,38 +162,44 @@ export default function App() {
             {
               id: 'widget-1',
               type: 'basic',
-              title: 'Welcome Widget',
+              title: 'Basic Widget with Menu',
               x: 0,
               y: 0,
-              w: 2,
-              h: 1
+              w: 3,
+              h: 3
             },
             {
               id: 'widget-2',
-              type: 'basic',
-              title: 'Stats Widget',
-              x: 2,
+              type: 'progress',
+              title: 'Upload Widget',
+              x: 3,
               y: 0,
-              w: 2,
-              h: 1
+              w: 3,
+              h: 3,
+              onMenuClick: handleMenuClick('widget-2', 'Upload'),
+              menuIcon: <Upload size={14} />
             },
             {
               id: 'widget-3',
               type: 'pie',
-              title: 'Distribution',
+              title: 'Download Widget',
               x: 0,
-              y: 1,
+              y: 3,
               w: 2,
-              h: 2
+              h: 2,
+              onMenuClick: handleMenuClick('widget-3', 'Download'),
+              menuIcon: <Download size={14} />
             },
             {
               id: 'widget-4',
               type: 'line',
-              title: 'Trends',
+              title: 'Refresh Widget',
               x: 2,
-              y: 1,
+              y: 3,
               w: 2,
-              h: 2
+              h: 2,
+              onMenuClick: handleMenuClick('widget-4', 'Refresh'),
+              menuIcon: <RefreshCw size={14} />
             }
           ]}
         />
@@ -120,7 +211,7 @@ export default function App() {
             <div>
               <h3 className="font-semibold text-green-900">Package Working!</h3>
               <p className="text-sm text-green-700 mt-1">
-                The rud-dashboard package is working with Preact + Vite. 
+                The rud-dashboard package is working with Preact + Vite.
                 Try toggling edit mode to drag, resize, and add widgets!
               </p>
             </div>

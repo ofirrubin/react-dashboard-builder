@@ -28,12 +28,12 @@ export function BarChartWidget({ data }: BarChartWidgetProps) {
   const maxValue = Math.max(...widgetData.data.map(item => item.value));
 
   return (
-    <div className="p-4 h-full flex flex-col">
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 text-center">
+    <div className="p-4 h-full flex flex-col overflow-hidden">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 text-center flex-shrink-0">
         {widgetData.label}
       </h3>
       
-      <div className="flex-1 flex items-end justify-between gap-1 px-2">
+      <div className="flex-1 flex items-end justify-between gap-1 px-2 min-h-0">
         {widgetData.data.map((item, index) => {
           const height = (item.value / maxValue) * 100;
           return (

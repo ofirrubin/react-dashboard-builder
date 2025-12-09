@@ -8,13 +8,13 @@ interface TooltipContextValue {
   open: boolean
   setOpen: (open: boolean) => void
   delay: number
-  triggerRef: React.RefObject<HTMLDivElement>
+  triggerRef: { current: HTMLDivElement | null }
 }
 
 const TooltipContext = createContext<TooltipContextValue | undefined>(undefined)
 
 interface TooltipProviderProps {
-  children: any
+  children?: unknown
 }
 
 export function TooltipProvider({ children }: TooltipProviderProps) {
@@ -22,7 +22,7 @@ export function TooltipProvider({ children }: TooltipProviderProps) {
 }
 
 interface TooltipProps {
-  children: any
+  children?: unknown
   delayDuration?: number
 }
 
@@ -30,17 +30,19 @@ export function Tooltip({ children, delayDuration = 200 }: TooltipProps) {
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLDivElement>(null)
 
+  const content: any = <div ref={triggerRef} className="relative inline-block">
+    {children as any}
+  </div>
+
   return (
     <TooltipContext.Provider value={{ open, setOpen, delay: delayDuration, triggerRef }}>
-      <div ref={triggerRef} className="relative inline-block">
-        {children}
-      </div>
+      {content}
     </TooltipContext.Provider>
   )
 }
 
 interface TooltipTriggerProps {
-  children: any
+  children?: unknown
   className?: string
   asChild?: boolean
   [key: string]: any
@@ -75,7 +77,7 @@ export function TooltipTrigger({ children, asChild, className, ...props }: Toolt
       className={cn("inline-block", className)}
       {...props}
     >
-      {children}
+      {children as any}
     </div>
   )
 }
@@ -83,7 +85,7 @@ export function TooltipTrigger({ children, asChild, className, ...props }: Toolt
 TooltipTrigger.displayName = "TooltipTrigger"
 
 interface TooltipContentProps {
-  children: any
+  children?: unknown
   className?: string
   sideOffset?: number
   side?: "top" | "right" | "bottom" | "left"
@@ -94,7 +96,7 @@ export function TooltipContent({ className, sideOffset = 4, side = "top", childr
   const context = useContext(TooltipContext)
   const contentRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ top: 0, left: 0 })
-  // Use state to force re-render if we need to flip styles, though we mostly use position
+  const [isPositioned, setIsPositioned] = useState(false)
 
   if (!context) throw new Error("TooltipContent must be used within Tooltip")
 
@@ -119,13 +121,13 @@ export function TooltipContent({ className, sideOffset = 4, side = "top", childr
         top = triggerRect.top + scrollY - contentRect.height - sideOffset
 
         // Flip logic: If top goes off screen (including scroll), move to bottom
-        // We check against the viewport relative top (triggerRect.top)
         if (triggerRect.top - contentRect.height - sideOffset < 0) {
           // Place below
           top = triggerRect.bottom + scrollY + sideOffset
         }
 
         setPosition({ top, left })
+        setIsPositioned(true)
       }
 
       updatePosition()
@@ -136,9 +138,10 @@ export function TooltipContent({ className, sideOffset = 4, side = "top", childr
       return () => {
         window.removeEventListener('resize', updatePosition)
         window.removeEventListener('scroll', updatePosition, true)
+        setIsPositioned(false)
       }
     }
-  }, [open, sideOffset]) // removing 'side' dep since we simplify to top/bottom flip for this specific fix
+  }, [open, sideOffset])
 
   if (!open) return null
 
@@ -148,20 +151,22 @@ export function TooltipContent({ className, sideOffset = 4, side = "top", childr
       style={{
         top: position.top,
         left: position.left,
-        position: 'absolute', // Using absolute relative to body (with scroll values included)
+        position: 'absolute',
+        opacity: isPositioned ? 1 : 0,
+        pointerEvents: 'none',
       }}
       className={cn(
         "z-50 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700",
         "bg-white dark:bg-gray-800 px-3 py-1.5 text-sm",
         "text-gray-900 dark:text-gray-100 shadow-lg dark:shadow-gray-900/50",
         "animate-in fade-in-0 zoom-in-95 duration-200",
-        "whitespace-nowrap pointer-events-none", // pointer-events-none prevents flickering if tooltip covers trigger
+        "whitespace-nowrap",
         className
       )}
       {...props}
     >
-      {children}
-    </div>,
+      {children as any}
+    </div> as any,
     document.body
   )
 }

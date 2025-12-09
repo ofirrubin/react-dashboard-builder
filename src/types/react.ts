@@ -5,7 +5,7 @@ import * as Shared from './shared';
 export type GridItem = Shared.GridItem<ReactNode>;
 export type DragState = Shared.DragState<ReactNode>;
 export type ResizeState = Shared.ResizeState<ReactNode>;
-export type WidgetType = Shared.WidgetType<ReactNode> & {
+export type WidgetType = Omit<Shared.WidgetType<ReactNode>, 'component' | 'preview'> & {
   component: ComponentType<any>;
   preview: ComponentType<any>;
 };

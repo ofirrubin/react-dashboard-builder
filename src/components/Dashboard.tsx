@@ -64,14 +64,15 @@ export default function Dashboard({
   const controller = externalController || internalController;
 
   // Ensure items have content renderers (in case they came from external controller without them)
-  // Ensure items have content renderers (in case they came from external controller without them)
-  const items = useMemo(() => controller.items.map(item => {
-    // If content is missing or if we want to ensure we use the latest registry
-    if (!item.content) {
-      return { ...item, content: () => renderWidgetContent(item) };
-    }
-    return item;
-  }), [controller.items, renderWidgetContent]);
+  const items = useMemo(() => {
+    return controller.items.map(item => {
+      // If content is missing or if we want to ensure we use the latest registry
+      if (!item.content) {
+        return { ...item, content: () => renderWidgetContent(item) };
+      }
+      return item;
+    });
+  }, [controller.items, renderWidgetContent]);
 
   const setItems = controller.setItems;
   const isEditMode = controller.isEditMode;
@@ -113,16 +114,17 @@ export default function Dashboard({
     // as the controller is the source of truth.
     if (externalController) return;
 
-    const currentItemsIds = items.map(item => item.id).sort().join(',');
-    const newItemsIds = initialItems.map(item => item.id).sort().join(',');
+    // Only update if the initialItems prop actually changed (not when internal items change)
+    // We check if there are items in initialItems that aren't in current items
+    const hasNewItems = initialItems.some(initItem => !items.find(item => item.id === initItem.id));
+    const hasMissingItems = items.some(item => !initialItems.find(initItem => initItem.id === item.id) && initialItems.length > 0);
 
-    // Only update if the items actually changed (compare by IDs and basic structure)
-    if (currentItemsIds !== newItemsIds || items.length !== initialItems.length) {
+    if (hasNewItems || (hasMissingItems && items.length < initialItems.length)) {
       const transformedItems = transformInitialItems(initialItems);
       setItems(transformedItems);
       isInitialLoad.current = true; // Prevent triggering onItemsChange for this update
     }
-  }, [initialItems, transformInitialItems, externalController, items, setItems]);
+  }, [initialItems, transformInitialItems, externalController]);
 
   const itemsOverlap = (a: GridItem, b: GridItem) =>
     !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
@@ -180,6 +182,23 @@ export default function Dashboard({
       return { ...testItemInitial, isAnimating: true };
     }
 
+    // For new widgets (starting at 0,0), use left-to-right, top-to-bottom scan first
+    if (startX === 0 && startY === 0 && existingItems.length > 0) {
+      // Find the maximum Y position to start searching from
+      const maxY = Math.max(...existingItems.map(it => it.y + it.h), 0);
+
+      // Search row by row, left to right
+      for (let y = 0; y <= Math.max(maxY, gridDimensions.rows - currentH); y++) {
+        for (let x = 0; x <= gridDimensions.cols - currentW; x++) {
+          const candidateItem = { ...item, x, y, w: currentW, h: currentH };
+          if (isValidPosition(candidateItem, existingItems)) {
+            return { ...candidateItem, isAnimating: true };
+          }
+        }
+      }
+    }
+
+    // Spiral search from the starting position (for repositioning existing items)
     const maxSearchDistance = Math.max(gridDimensions.cols, gridDimensions.rows);
     for (let distance = 1; distance <= maxSearchDistance; distance++) {
       for (let dy = -distance; dy <= distance; dy++) {
@@ -200,6 +219,7 @@ export default function Dashboard({
       }
     }
 
+    // Final fallback: scan entire grid
     for (let y = 0; y <= gridDimensions.rows - currentH; y++) {
       for (let x = 0; x <= gridDimensions.cols - currentW; x++) {
         const candidateItem = { ...item, x, y, w: currentW, h: currentH };
@@ -211,7 +231,6 @@ export default function Dashboard({
 
     const finalW = Math.min(currentW, gridDimensions.cols);
     const finalH = Math.min(currentH, gridDimensions.rows);
-    console.warn(`⚠️ Last resort position for ${item.id}:`, { x: 0, y: 0, w: finalW, h: finalH });
     return { ...item, x: 0, y: 0, w: finalW, h: finalH, isAnimating: true };
   };
 
@@ -250,9 +269,6 @@ export default function Dashboard({
           }
         }
       }
-    }
-    if (attempts >= maxAttempts && hasOverlaps) {
-      console.warn(`⚠️ Max attempts (${maxAttempts}) reached in detectAndFixOverlaps.`);
     }
     return result;
   };
@@ -462,40 +478,8 @@ export default function Dashboard({
 
     const finalW = Math.min(currentW, cols);
     const finalH = Math.min(currentH, rows);
-    console.warn(`⚠️ Last resort position for ${item.id} in new grid:`, { x: 0, y: 0, w: finalW, h: finalH });
     return { ...item, x: 0, y: 0, w: finalW, h: finalH, isAnimating: true };
   };
-
-  // const resolveOverlaps = (currentItems: GridItem[], movedId: string) => {
-  //   let updatedItems = currentItems.map(i => ({ ...i }));
-  //   const movedItem = updatedItems.find(i => i.id === movedId);
-  //   if (!movedItem) {
-  //     return updatedItems;
-  //   }
-
-  //   const itemsToPotentiallyMove = updatedItems.filter(item => item.id !== movedId && itemsOverlap(item, movedItem));
-
-  //   for (const item of itemsToPotentiallyMove) {
-  //     const otherItems = updatedItems.filter(other => other.id !== item.id);
-  //     const safePositionData = findSafePosition(item, otherItems, true);
-
-  //     const itemIndex = updatedItems.findIndex(i => i.id === item.id);
-  //     if (itemIndex !== -1) {
-  //       updatedItems[itemIndex] = {
-  //         ...updatedItems[itemIndex],
-  //         x: safePositionData.x,
-  //         y: safePositionData.y,
-  //         w: safePositionData.w,
-  //         h: safePositionData.h,
-  //         isAnimating: true,
-  //       };
-  //     }
-  //   }
-  //   const finalResult = detectAndFixOverlaps(updatedItems, true);
-  //   setTimeout(() => setItems(prev => prev.map(it => ({ ...it, isAnimating: false }))), ANIMATION_DURATION);
-  //   return finalResult;
-  // };
-
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const gridContentRect = containerRef.current?.getBoundingClientRect();
     if (!gridContentRect) return;
@@ -666,21 +650,31 @@ export default function Dashboard({
       content: () => renderWidgetContent({ id: nextId.toString(), type: widgetConfig.type, title: widgetConfig.title } as GridItem),
       originalX: safePosData.x, originalY: safePosData.y,
       originalW: safePosData.w, originalH: safePosData.h,
+      onMenuClick: widgetConfig.onMenuClick,
+      menuIcon: widgetConfig.menuIcon,
       isAnimating: true,
     };
-
     if (isValidPosition(newItem, items)) {
       const newItems = [...items, newItem];
-      setItems(detectAndFixOverlaps(newItems, true));
+      const itemsWithOverlapsFixed = detectAndFixOverlaps(newItems, true);
+      setItems(itemsWithOverlapsFixed);
       setNextId(prevId => prevId + 1);
-      setItems((prev: GridItem[]) => detectAndFixOverlaps(prev.map((it: GridItem) => ({ ...it, isAnimating: false })), true));
+
+      // Remove animation after a delay
+      setTimeout(() => {
+        setItems((prev: GridItem[]) => prev.map((it: GridItem) => ({ ...it, isAnimating: false })));
+      }, ANIMATION_DURATION);
     } else {
-      console.warn("Could not find valid position for new widget even after findSafePosition. Attempting fallback.", newItem);
       const fallbackItem = { ...newItem, x: 0, y: 0, originalX: 0, originalY: 0 };
       const newItems = [...items, fallbackItem];
-      setItems(detectAndFixOverlaps(newItems, true));
+      const itemsWithOverlapsFixed = detectAndFixOverlaps(newItems, true);
+      setItems(itemsWithOverlapsFixed);
       setNextId(prevId => prevId + 1);
-      setItems((prev: GridItem[]) => detectAndFixOverlaps(prev.map((it: GridItem) => ({ ...it, isAnimating: false })), true));
+
+      // Remove animation after a delay
+      setTimeout(() => {
+        setItems((prev: GridItem[]) => prev.map((it: GridItem) => ({ ...it, isAnimating: false })));
+      }, ANIMATION_DURATION);
     }
   };
 
@@ -883,29 +877,42 @@ export default function Dashboard({
           <span className={`font-medium truncate ${isPreview ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>
             {item.title}
           </span>
-          {!isPreview && isEditMode && (
+          {!isPreview && (
             <div className="flex items-center gap-0.5 flex-shrink-0">
-              <button className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-0.5" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} ><MoreHorizontal size={14} /></button>
-              <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} onMouseDown={(e) => e.stopPropagation()} className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-0.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" ><X size={14} /></button>
+              {isEditMode && item.onMenuClick && (
+                <button
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-0.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    item.onMenuClick?.(e);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Widget options"
+                >
+                  {item.menuIcon || <MoreHorizontal size={14} />}
+                </button>
+              )}
+              {isEditMode && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-0.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                  title="Remove widget"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           )}
         </div>
-        <div className="p-1 flex items-center justify-center h-[calc(100%-30px)] overflow-hidden">
+        <div className="p-1 flex items-center justify-center h-[calc(100%-30px)] overflow-auto">
           {item.content ? item.content() : null}
         </div>
       </div>
     );
   };
 
-  /*
-  useEffect(() => {
-    const validateAndFixItems = () => {
-      // ... validation logic commented out to prevent infinite loop ...
-    };
-    // const timeoutId = setTimeout(validateAndFixItems, DEBOUNCE_DELAY + 50);
-    // return () => clearTimeout(timeoutId);
-  }, [JSON.stringify(items.map(({ isAnimating, ...rest }) => rest)), gridDimensions.cols, gridDimensions.rows, dragState, resizeState, preview]);
-  */
+
 
   // Create dashboard actions object for custom toolbars
   const dashboardActions: DashboardActions = {

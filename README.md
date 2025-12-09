@@ -20,7 +20,7 @@ Update your `tailwind.config.js`:
 import rudPreset from 'rud-dashboard/tailwind.preset'
 
 export default {
-  presets: [rudPreset],
+  presets: [rdbPreset],
   content: [
     "./src/**/*.{js,ts,jsx,tsx}",
     "./node_modules/rud-dashboard/**/*.{js,ts,jsx,tsx}",

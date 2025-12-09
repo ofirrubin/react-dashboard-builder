@@ -50,14 +50,14 @@ export function LineChartWidget({ data }: LineChartWidgetProps) {
   }, '');
 
   return (
-    <div className="p-4 h-full flex flex-col">
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 text-center">
+    <div className="p-4 h-full flex flex-col overflow-hidden">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 text-center flex-shrink-0">
         {widgetData.label}
       </h3>
       
-      <div className="flex-1 flex items-center justify-center">
-        <div className="relative">
-          <svg width={width} height={height} className="overflow-visible">
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <div className="relative max-w-full">
+          <svg width={width} height={height} className="max-w-full h-auto">
             {/* Grid lines */}
             {[0, 25, 50, 75, 100].map((percent, index) => {
               const y = height - padding - (percent / 100) * (height - 2 * padding);
@@ -102,9 +102,9 @@ export function LineChartWidget({ data }: LineChartWidgetProps) {
       </div>
 
       {/* X-axis labels */}
-      <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mt-2">
+      <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mt-2 flex-shrink-0 gap-1">
         {widgetData.data.map((item, index) => (
-          <span key={index} className="text-center">
+          <span key={index} className="text-center truncate min-w-0 flex-1">
             {item.name}
           </span>
         ))}

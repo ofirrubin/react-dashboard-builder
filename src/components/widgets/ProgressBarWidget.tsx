@@ -21,7 +21,7 @@ export function ProgressBarWidget({ data }: ProgressBarWidgetProps) {
   const percentage = (widgetData.value / widgetData.max) * 100;
 
   return (
-    <div className="p-4 h-full flex flex-col justify-center">
+    <div className="p-4 h-full flex flex-col justify-center overflow-hidden">
       <div className="text-center">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
           {widgetData.label}
