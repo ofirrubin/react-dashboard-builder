@@ -1,6 +1,6 @@
 {
   "name": "rud-dashboard",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": "Ofir Rubin",
   "description": "A flexible dashboard component library with drag-and-drop, resize, and grid layout support for React and Preact",
   "type": "module",
