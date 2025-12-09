@@ -80,10 +80,11 @@
     "interactive",
     "drag and drop"
   ],
-  "homepage": "https://github.com/ofirrubin/rud-dashboard",
+  "homepage": "https://github.com/ofirrubin/react-dashboard-builder",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ofirrubin/rud-dashboard.git"
+    "url": "https://github.com/ofirrubin/react-dashboard-builder.git",
+    "directory": "packages/react-dashboard-builder"
   },
   "license": "MIT"
 }
