@@ -1,18 +1,7 @@
-interface LineChartData {
-  label: string;
-  data: Array<{
-    name: string;
-    value: number;
-  }>;
-  color?: string;
-}
+import { BaseWidgetProps, LineChartWidgetProps } from '../../types/shared';
 
-interface LineChartWidgetProps {
-  data?: LineChartData;
-}
-
-export function LineChartWidget({ data }: LineChartWidgetProps) {
-  const defaultData: LineChartData = {
+export function LineChartWidget({ id, title, data }: LineChartWidgetProps & BaseWidgetProps) {
+  const defaultData: LineChartWidgetProps['data'] = {
     label: 'Performance Trend',
     data: [
       { name: 'Jan', value: 30 },
@@ -29,84 +18,95 @@ export function LineChartWidget({ data }: LineChartWidgetProps) {
   const widgetData = data || defaultData;
   const maxValue = Math.max(...widgetData.data.map(item => item.value));
   const minValue = Math.min(...widgetData.data.map(item => item.value));
-  const range = maxValue - minValue;
+  const range = maxValue - minValue || 1;
 
-  // SVG dimensions
-  const width = 200;
-  const height = 80;
-  const padding = 10;
+  const width = 300;
+  const height = 120;
+  const padding = 20;
 
-  // Calculate points for the line
   const points = widgetData.data.map((item, index) => {
     const x = padding + (index / (widgetData.data.length - 1)) * (width - 2 * padding);
     const y = height - padding - ((item.value - minValue) / range) * (height - 2 * padding);
     return { x, y, value: item.value, name: item.name };
   });
 
-  // Create path string
-  const pathData = points.reduce((path, point, index) => {
-    const command = index === 0 ? 'M' : 'L';
-    return `${path} ${command} ${point.x} ${point.y}`;
+  // Create smooth cubic bezier curve
+  const pathData = points.reduce((acc, point, i, a) => {
+    if (i === 0) return `M ${point.x},${point.y}`;
+    
+    // Control points for smoothness
+    const p0 = a[i - 1];
+    const p1 = point;
+    const cp1x = p0.x + (p1.x - p0.x) / 2;
+    const cp2x = p0.x + (p1.x - p0.x) / 2;
+    
+    return `${acc} C ${cp1x},${p0.y} ${cp2x},${p1.y} ${p1.x},${p1.y}`;
   }, '');
 
+  // For the area fill
+  const areaPath = `${pathData} L ${points[points.length - 1].x},${height - padding} L ${points[0].x},${height - padding} Z`;
+
   return (
-    <div className="p-4 h-full flex flex-col overflow-hidden">
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 text-center flex-shrink-0">
-        {widgetData.label}
+    <div className="p-6 h-full flex flex-col overflow-hidden bg-white dark:bg-gray-800">
+      <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
+        {widgetData.label || title}
       </h3>
       
       <div className="flex-1 flex items-center justify-center min-h-0">
-        <div className="relative max-w-full">
-          <svg width={width} height={height} className="max-w-full h-auto">
-            {/* Grid lines */}
-            {[0, 25, 50, 75, 100].map((percent, index) => {
-              const y = height - padding - (percent / 100) * (height - 2 * padding);
-              return (
-                <line
-                  key={index}
-                  x1={padding}
-                  y1={y}
-                  x2={width - padding}
-                  y2={y}
-                  stroke="currentColor"
-                  strokeWidth="0.5"
-                  opacity="0.2"
-                  className="text-gray-400"
-                />
-              );
-            })}
-            
-            {/* Line path */}
-            <path
-              d={pathData}
-              fill="none"
-              stroke={widgetData.color || '#3B82F6'}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            
-            {/* Data points */}
-            {points.map((point, index) => (
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
+          <defs>
+            <linearGradient id={`grad-${id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={widgetData.color} stopOpacity="0.15" />
+              <stop offset="100%" stopColor={widgetData.color} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          {/* Grid lines */}
+          {[0, 0.5, 1].map((v, i) => {
+            const y = padding + v * (height - 2 * padding);
+            return (
+              <line key={i} x1={padding} y1={y} x2={width - padding} y2={y} stroke="currentColor" strokeWidth="1" className="text-gray-100 dark:text-gray-700" strokeDasharray="4 4" />
+            );
+          })}
+          
+          {/* Area under the line */}
+          <path d={areaPath} fill={`url(#grad-${id})`} />
+          
+          {/* Main line */}
+          <path
+            d={pathData}
+            fill="none"
+            stroke={widgetData.color || '#3B82F6'}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="drop-shadow-sm"
+          />
+          
+          {/* Interaction points */}
+          {points.map((point, index) => (
+            <g key={index} className="group/point">
               <circle
-                key={index}
                 cx={point.x}
                 cy={point.y}
-                r="3"
-                fill={widgetData.color || '#3B82F6'}
-                className="hover:r-4 transition-all"
+                r="4"
+                fill="white"
+                stroke={widgetData.color || '#3B82F6'}
+                strokeWidth="2.5"
+                className="transition-all duration-300 group-hover/point:r-6 cursor-pointer"
               />
-            ))}
-          </svg>
-        </div>
+            </g>
+          ))}
+        </svg>
       </div>
 
-      {/* X-axis labels */}
-      <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mt-2 flex-shrink-0 gap-1">
+      <div className="flex justify-between mt-4">
         {widgetData.data.map((item, index) => (
-          <span key={index} className="text-center truncate min-w-0 flex-1">
-            {item.name}
-          </span>
+          index % 2 === 0 && (
+            <span key={index} className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+              {item.name}
+            </span>
+          )
         ))}
       </div>
     </div>
@@ -115,34 +115,23 @@ export function LineChartWidget({ data }: LineChartWidgetProps) {
 
 export function LineChartPreview() {
   return (
-    <div className="p-2 h-16 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded">
-      <div className="flex items-center gap-2">
-        {/* Simplified line chart */}
-        <svg width="32" height="20" className="overflow-visible">
+    <div className="p-3 h-full flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+      <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-800">
+        <svg width="24" height="16" viewBox="0 0 24 16" className="overflow-visible">
           <path
-            d="M 2 18 L 8 12 L 14 15 L 20 8 L 26 10 L 30 6"
+            d="M 2 14 Q 6 4 10 10 T 18 2 T 22 6"
             fill="none"
             stroke="#3B82F6"
-            strokeWidth="1.5"
+            strokeWidth="2"
             strokeLinecap="round"
             className="animate-pulse"
           />
-          {[2, 8, 14, 20, 26, 30].map((x, index) => (
-            <circle
-              key={index}
-              cx={x}
-              cy={[18, 12, 15, 8, 10, 6][index]}
-              r="1"
-              fill="#3B82F6"
-              className="animate-pulse"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            />
-          ))}
         </svg>
-        <div className="text-xs text-gray-600 dark:text-gray-400">
-          Line Chart
-        </div>
+      </div>
+      <div className="flex flex-col">
+        <span className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none mb-1">Growth Curve</span>
+        <span className="text-[10px] text-gray-500 uppercase font-medium">Trend Analysis</span>
       </div>
     </div>
   );
-} 
+}

@@ -27,7 +27,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsup && cp src/styles.css dist/styles.css",
+    "build": "tsup && bunx @tailwindcss/cli -i ./src/styles.css -o ./dist/styles.css",
     "pack:local": "bun run build && bun pm pack",
     "preview": "vite preview",
     "test:react": "vite --config vite.test-react.config.ts",

@@ -1,5 +1,16 @@
-// Generic types that work with any framework
-export interface GridItem<T = any> {
+/**
+ * Generic types for the RUD library.
+ * These are framework-agnostic and should be bound to specific framework types (React/Preact) 
+ * in their respective type definition files.
+ */
+
+export interface BaseWidgetProps {
+  id: string;
+  title: string;
+  type: string;
+}
+
+export interface GridItem<TNode> {
   id: string;
   x: number;
   y: number;
@@ -7,49 +18,55 @@ export interface GridItem<T = any> {
   h: number;
   type: string;
   title: string;
-  content?: () => T;
-  onMenuClick?: (event: any) => void;
-  menuIcon?: T; // Custom icon for the menu button (e.g., Settings, Upload, Trash, etc.)
+  content?: () => TNode;
+  onMenuClick?: (event: MouseEvent | TouchEvent) => void;
+  menuIcon?: TNode;
   isAnimating?: boolean;
   originalX?: number;
   originalY?: number;
   originalW?: number;
   originalH?: number;
 }
-export interface DragState<T = any> {
+
+export interface DragState<TNode> {
   id: string;
   startX: number;
   startY: number;
-  originalItem: GridItem<T>;
+  originalItem: GridItem<TNode>;
 }
-export interface ResizeState<T = any> extends DragState<T> {
+
+export interface ResizeState<TNode> extends DragState<TNode> {
   handle: string;
 }
-export interface WidgetType<T = any> {
+
+export interface WidgetType<TNode, TComponent> {
   id: string;
   type: string;
   title: string;
-  icon: T;
+  icon: TNode;
   defaultSize: {
     w: number;
     h: number;
   };
   description: string;
-  component: any;
-  preview: any;
-  onMenuClick?: (event: any) => void;
-  menuIcon?: T;
+  component: TComponent;
+  preview: TComponent;
+  onMenuClick?: (event: MouseEvent | TouchEvent) => void;
+  menuIcon?: TNode;
 }
+
 export type GridMode = 'elegant' | 'dots' | 'harsh' | 'blank';
-export interface DashboardActions<T = any> {
+
+export interface DashboardActions<TNode, TComponent> {
   toggleEditMode: () => void;
   toggleAddWidgetMode: () => void;
   autoOrganize: () => void;
   toggleFixedHeight: () => void;
-  addWidget: (widget: WidgetType<T>, x?: number, y?: number) => void;
+  addWidget: (widget: WidgetType<TNode, TComponent>, x?: number, y?: number) => void;
   removeItem: (id: string) => void;
 }
-export interface DashboardState<T = any> {
+
+export interface DashboardState<TNode> {
   isEditMode: boolean;
   isAddWidgetMode: boolean;
   isFixedHeight: boolean;
@@ -60,56 +77,72 @@ export interface DashboardState<T = any> {
     rows: number;
   };
   itemCount: number;
-  items: GridItem<T>[];
+  items: GridItem<TNode>[];
+}
+
+export interface SerializedDashboardItem {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  type: string;
+  title: string;
+  originalX?: number;
+  originalY?: number;
+  originalW?: number;
+  originalH?: number;
 }
 
 export interface SerializedDashboard {
-  items: Omit<GridItem<any>, 'content'>[];
+  version: number;
+  items: SerializedDashboardItem[];
 }
 
-export interface DashboardController<T = any> {
-  items: GridItem<T>[];
-  addItem: (item: GridItem<T>) => void;
+export interface DashboardController<TNode> {
+  items: GridItem<TNode>[];
+  addItem: (item: GridItem<TNode>) => void;
   removeItem: (id: string) => void;
-  updateItem: (id: string, updates: Partial<GridItem<T>>) => void;
-  setItems: (items: GridItem<T>[] | ((prev: GridItem<T>[]) => GridItem<T>[])) => void;
+  updateItem: (id: string, updates: Partial<GridItem<TNode>>) => void;
+  setItems: (items: GridItem<TNode>[] | ((prev: GridItem<TNode>[]) => GridItem<TNode>[])) => void;
   save: () => SerializedDashboard;
   load: (state: SerializedDashboard) => void;
   clear: () => void;
-  // State for UI
   isEditMode: boolean;
   toggleEditMode: () => void;
   setEditMode: (enabled: boolean) => void;
 }
 
-export interface UseDashboardControllerOptions<T = any> {
-  initialItems?: GridItem<T>[];
+export interface UseDashboardControllerOptions<TNode> {
+  initialItems?: GridItem<TNode>[];
   initialEditMode?: boolean;
 }
 
-export interface CustomToolbarProps<T = any> {
-  state: DashboardState<T>;
-  actions: DashboardActions<T>;
-  availableWidgetTypes: WidgetType<T>[];
+export interface CustomToolbarProps<TNode, TComponent> {
+  state: DashboardState<TNode>;
+  actions: DashboardActions<TNode, TComponent>;
+  availableWidgetTypes: WidgetType<TNode, TComponent>[];
 }
-export interface DashboardProps<T = any> {
-  availableWidgetTypes?: WidgetType<T>[];
-  initialItems?: Omit<GridItem<T>, 'content'>[];
-  widgetRegistry?: Record<string, any>;
-  onItemsChange?: (items: Omit<GridItem<T>, 'content'>[]) => void;
+
+export interface DashboardProps<TNode, TComponent, TToolbarProps> {
+  availableWidgetTypes?: WidgetType<TNode, TComponent>[];
+  initialItems?: SerializedDashboardItem[];
+  widgetRegistry?: Record<string, TComponent>;
+  onItemsChange?: (items: SerializedDashboardItem[]) => void;
   className?: string;
   enableEditMode?: boolean;
   defaultEditMode?: boolean;
   gridMode?: GridMode;
   showDefaultToolbar?: boolean;
-  customToolbar?: any;
+  customToolbar?: (props: TToolbarProps) => TNode;
   toolbarClassName?: string;
   onEditModeChange?: (isEditMode: boolean) => void;
   onAddWidgetModeChange?: (isAddWidgetMode: boolean) => void;
   onFixedHeightChange?: (isFixedHeight: boolean) => void;
-  controller?: DashboardController<T>;
+  controller?: DashboardController<TNode>;
 }
-export interface DashboardToolbarProps<T = any> {
+
+export interface DashboardToolbarProps<TNode, TComponent> {
   isEditMode: boolean;
   onToggleMode: () => void;
   onAutoOrganize: () => void;
@@ -124,23 +157,25 @@ export interface DashboardToolbarProps<T = any> {
   itemCount: number;
   isAddWidgetMode?: boolean;
   onToggleAddWidgetMode?: () => void;
-  onAddWidget?: (widget: WidgetType<T>) => void;
-  availableWidgetTypes?: WidgetType<T>[];
+  onAddWidget?: (widget: WidgetType<TNode, TComponent>) => void;
+  availableWidgetTypes?: WidgetType<TNode, TComponent>[];
+  gridMode?: GridMode;
+  onGridModeChange?: (mode: GridMode) => void;
 }
 
-export interface BasicWidgetProps {
-  id?: string;
-  title?: string;
-}
+export interface BasicWidgetProps extends BaseWidgetProps { }
+
 export interface ProgressBarData {
   label: string;
   value: number;
   max: number;
   color?: string;
 }
-export interface ProgressBarWidgetProps {
-  data?: ProgressBarData;
+
+export interface ProgressBarWidgetProps extends BaseWidgetProps {
+  data: ProgressBarData;
 }
+
 export interface PieChartData {
   label: string;
   segments: Array<{
@@ -149,9 +184,11 @@ export interface PieChartData {
     color: string;
   }>;
 }
-export interface PieChartWidgetProps {
-  data?: PieChartData;
+
+export interface PieChartWidgetProps extends BaseWidgetProps {
+  data: PieChartData;
 }
+
 export interface BarChartData {
   label: string;
   data: Array<{
@@ -160,9 +197,11 @@ export interface BarChartData {
     color?: string;
   }>;
 }
-export interface BarChartWidgetProps {
-  data?: BarChartData;
+
+export interface BarChartWidgetProps extends BaseWidgetProps {
+  data: BarChartData;
 }
+
 export interface LineChartData {
   label: string;
   data: Array<{
@@ -171,6 +210,7 @@ export interface LineChartData {
   }>;
   color?: string;
 }
-export interface LineChartWidgetProps {
-  data?: LineChartData;
+
+export interface LineChartWidgetProps extends BaseWidgetProps {
+  data: LineChartData;
 }

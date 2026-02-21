@@ -1,8 +1,10 @@
+import * as React from 'react';
 import { BasicWidget, BasicWidgetPreview } from './BasicWidget';
 import { ProgressBarWidget, ProgressBarPreview } from './ProgressBarWidget';
 import { PieChartWidget, PieChartPreview } from './PieChartWidget';
 import { BarChartWidget, BarChartPreview } from './BarChartWidget';
 import { LineChartWidget, LineChartPreview } from './LineChartWidget';
+import { BaseWidgetProps } from '../../types/shared';
 
 export {
   BasicWidget,
@@ -22,29 +24,29 @@ export {
 };
 
 // Widget registry - maps widget types to their components
-export const widgetRegistry = {
+export const widgetRegistry: Record<string, React.ComponentType<BaseWidgetProps>> = {
   basic: BasicWidget,
-  progress: ProgressBarWidget,
-  pie: PieChartWidget,
-  bar: BarChartWidget,
-  line: LineChartWidget
+  progress: ProgressBarWidget as React.ComponentType<BaseWidgetProps>,
+  pie: PieChartWidget as React.ComponentType<BaseWidgetProps>,
+  bar: BarChartWidget as React.ComponentType<BaseWidgetProps>,
+  line: LineChartWidget as React.ComponentType<BaseWidgetProps>
 };
 
 // Preview registry - maps widget types to their preview components
-export const previewRegistry = {
-  basic: BasicWidgetPreview,
-  progress: ProgressBarPreview,
-  pie: PieChartPreview,
-  bar: BarChartPreview,
-  line: LineChartPreview
+export const previewRegistry: Record<string, React.ComponentType<BaseWidgetProps>> = {
+  basic: BasicWidgetPreview as React.ComponentType<BaseWidgetProps>,
+  progress: ProgressBarPreview as React.ComponentType<BaseWidgetProps>,
+  pie: PieChartPreview as React.ComponentType<BaseWidgetProps>,
+  bar: BarChartPreview as React.ComponentType<BaseWidgetProps>,
+  line: LineChartPreview as React.ComponentType<BaseWidgetProps>
 };
 
 // Function to get widget component by type
-export function getWidgetComponent(type: string) {
-  return widgetRegistry[type as keyof typeof widgetRegistry] || BasicWidget;
+export function getWidgetComponent(type: string): React.ComponentType<BaseWidgetProps> {
+  return widgetRegistry[type] || BasicWidget;
 }
 
 // Function to get preview component by type
-export function getPreviewComponent(type: string) {
-  return previewRegistry[type as keyof typeof previewRegistry] || BasicWidgetPreview;
-} 
+export function getPreviewComponent(type: string): React.ComponentType<BaseWidgetProps> {
+  return previewRegistry[type] || BasicWidgetPreview;
+}

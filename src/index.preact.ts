@@ -1,3 +1,4 @@
+/// <reference path="./global.preact.d.ts" />
 // Re-export components with Preact types
 import DashboardComponent from './components/Dashboard'
 export { default as Dashboard } from './components/Dashboard'

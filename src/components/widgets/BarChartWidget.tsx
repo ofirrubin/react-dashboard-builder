@@ -1,18 +1,8 @@
-interface BarChartData {
-  label: string;
-  data: Array<{
-    name: string;
-    value: number;
-    color?: string;
-  }>;
-}
+import { BaseWidgetProps, BarChartWidgetProps } from '../../types/shared';
+import { cn } from '../../lib/utils';
 
-interface BarChartWidgetProps {
-  data?: BarChartData;
-}
-
-export function BarChartWidget({ data }: BarChartWidgetProps) {
-  const defaultData: BarChartData = {
+export function BarChartWidget({ id, title, data }: BarChartWidgetProps & BaseWidgetProps) {
+  const defaultData: BarChartWidgetProps['data'] = {
     label: 'Monthly Revenue',
     data: [
       { name: 'Jan', value: 65, color: '#3B82F6' },
@@ -28,31 +18,31 @@ export function BarChartWidget({ data }: BarChartWidgetProps) {
   const maxValue = Math.max(...widgetData.data.map(item => item.value));
 
   return (
-    <div className="p-4 h-full flex flex-col overflow-hidden">
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 text-center flex-shrink-0">
-        {widgetData.label}
+    <div className="p-6 h-full flex flex-col overflow-hidden bg-white dark:bg-gray-800">
+      <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-6">
+        {widgetData.label || title}
       </h3>
       
-      <div className="flex-1 flex items-end justify-between gap-1 px-2 min-h-0">
+      <div className="flex-1 flex items-end justify-between gap-2 px-2 min-h-0">
         {widgetData.data.map((item, index) => {
           const height = (item.value / maxValue) * 100;
           return (
-            <div key={index} className="flex-1 flex flex-col items-center">
-              <div className="flex-1 flex items-end w-full">
+            <div key={index} className="flex-1 flex flex-col items-center group">
+              <div className="flex-1 flex items-end w-full relative">
                 <div
-                  className="w-full rounded-t transition-all duration-500 hover:opacity-80"
+                  className="w-full rounded-t-lg transition-all duration-500 hover:brightness-110 shadow-sm"
                   style={{
-                    height: `${height}%`,
+                    height: `${Math.max(4, height)}%`,
                     backgroundColor: item.color || '#3B82F6',
-                    minHeight: '4px'
                   }}
                 />
+                {/* Tooltip on hover */}
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                  {item.value}
+                </div>
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">
+              <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 mt-3 text-center uppercase tracking-tighter">
                 {item.name}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-500">
-                {item.value}
               </div>
             </div>
           );
@@ -63,25 +53,19 @@ export function BarChartWidget({ data }: BarChartWidgetProps) {
 }
 
 export function BarChartPreview() {
-  const heights = [60, 80, 40, 90, 70];
+  const heights = [40, 70, 50, 90, 60];
   
   return (
-    <div className="p-2 h-16 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded">
-      <div className="flex items-end gap-1 h-8">
-        {heights.map((height, index) => (
-          <div
-            key={index}
-            className="w-2 bg-blue-400 rounded-t animate-pulse"
-            style={{ 
-              height: `${height}%`,
-              animationDelay: `${index * 0.1}s`
-            }}
-          />
+    <div className="p-3 h-full flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+      <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-end justify-center gap-0.5 p-1.5 border border-blue-100 dark:border-blue-800">
+        {heights.map((h, i) => (
+          <div key={i} className="flex-1 bg-blue-600 rounded-sm" style={{ height: `${h}%` }} />
         ))}
       </div>
-      <div className="ml-2 text-xs text-gray-600 dark:text-gray-400">
-        Bar Chart
+      <div className="flex flex-col">
+        <span className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none mb-1">Bar Analytics</span>
+        <span className="text-[10px] text-gray-500 uppercase font-medium">Comparison View</span>
       </div>
     </div>
   );
-} 
+}

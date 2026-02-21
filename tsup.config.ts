@@ -23,9 +23,11 @@ export default defineConfig([
     entry: ['src/index.preact.ts'],
     format: ['cjs', 'esm'],
     dts: {
+      resolve: true,
       compilerOptions: {
         jsx: 'react-jsx',
         jsxImportSource: 'preact',
+        skipLibCheck: true,
       },
     },
     splitting: false,

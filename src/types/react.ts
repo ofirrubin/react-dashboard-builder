@@ -5,23 +5,28 @@ import * as Shared from './shared';
 export type GridItem = Shared.GridItem<ReactNode>;
 export type DragState = Shared.DragState<ReactNode>;
 export type ResizeState = Shared.ResizeState<ReactNode>;
-export type WidgetType = Omit<Shared.WidgetType<ReactNode>, 'component' | 'preview'> & {
-  component: ComponentType<any>;
-  preview: ComponentType<any>;
-};
-export type DashboardActions = Shared.DashboardActions<ReactNode>;
+export type WidgetType = Shared.WidgetType<ReactNode, ComponentType<Shared.BaseWidgetProps>>;
+export type DashboardActions = Shared.DashboardActions<ReactNode, ComponentType<Shared.BaseWidgetProps>>;
 export type DashboardState = Shared.DashboardState<ReactNode>;
 export type DashboardController = Shared.DashboardController<ReactNode>;
 export type UseDashboardControllerOptions = Shared.UseDashboardControllerOptions<ReactNode>;
-export type CustomToolbarProps = Shared.CustomToolbarProps<ReactNode>;
-export type DashboardProps = Shared.DashboardProps<ReactNode> & {
-  widgetRegistry?: Record<string, ComponentType<any>>;
-  customToolbar?: ComponentType<CustomToolbarProps> | ((props: CustomToolbarProps) => ReactNode);
-};
-export type DashboardToolbarProps = Shared.DashboardToolbarProps<ReactNode>;
+export type CustomToolbarProps = Shared.CustomToolbarProps<ReactNode, ComponentType<Shared.BaseWidgetProps>>;
+export type DashboardProps = Shared.DashboardProps<ReactNode, ComponentType<Shared.BaseWidgetProps>, CustomToolbarProps>;
+export type DashboardToolbarProps = Shared.DashboardToolbarProps<ReactNode, ComponentType<Shared.BaseWidgetProps>>;
 
 // Re-export non-generic types
-export type { GridMode, SerializedDashboard } from './shared';
-
-// Re-export widget props (these don't need framework-specific types)
-export * from './shared';
+export type { 
+  GridMode, 
+  SerializedDashboard, 
+  SerializedDashboardItem,
+  BaseWidgetProps,
+  BasicWidgetProps,
+  ProgressBarData,
+  ProgressBarWidgetProps,
+  PieChartData,
+  PieChartWidgetProps,
+  BarChartData,
+  BarChartWidgetProps,
+  LineChartData,
+  LineChartWidgetProps
+} from './shared';
