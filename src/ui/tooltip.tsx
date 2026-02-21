@@ -160,7 +160,7 @@ export function TooltipContent({
       ref={contentRef}
       style={style as any}
       className={cn(
-        "px-3 py-1.5 text-xs font-semibold rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-xl",
+        "px-3 py-1.5 text-xs font-semibold rounded-xl bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 dark:border dark:border-gray-700 shadow-xl",
         "animate-in fade-in zoom-in-95 duration-200",
         "whitespace-nowrap select-none",
         className

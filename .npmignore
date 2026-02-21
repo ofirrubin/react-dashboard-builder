@@ -1,0 +1,8 @@
+example/
+playground/
+.git/
+.github/
+node_modules/
+src/
+*.log
+*.tgz

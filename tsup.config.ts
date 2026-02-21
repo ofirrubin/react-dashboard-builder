@@ -33,7 +33,7 @@ export default defineConfig([
     splitting: false,
     sourcemap: true,
     clean: false,
-    external: ['preact', 'preact/hooks'],
+    external: ['preact', 'preact/hooks', 'preact/compat', 'preact/jsx-runtime', 'react', 'react-dom'],
     injectStyle: true,
     outDir: 'dist/preact',
     esbuildOptions(options) {
@@ -42,6 +42,13 @@ export default defineConfig([
       }
       options.jsx = 'automatic'
       options.jsxImportSource = 'preact'
+      options.alias = {
+        ...(options.alias || {}),
+        'react': 'preact/compat',
+        'react-dom': 'preact/compat',
+        'react-dom/test-utils': 'preact/test-utils',
+        'react/jsx-runtime': 'preact/jsx-runtime'
+      }
     },
   },
 ])

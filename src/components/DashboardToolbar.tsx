@@ -35,6 +35,7 @@ export function DashboardToolbar({
   availableWidgetTypes = [],
   gridMode = 'elegant',
   onGridModeChange = () => { },
+  customActions,
 }: DashboardToolbarProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   return (
@@ -63,8 +64,8 @@ export function DashboardToolbar({
                     className={cn(
                       "rounded-xl gap-2 transition-all duration-300 pointer-events-auto",
                       isEditMode
-                        ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20"
-                        : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 text-white"
+                        : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                     )}
                   >
                     {isEditMode ? <Check size={16} /> : <MousePointer2 size={16} />}
@@ -85,7 +86,9 @@ export function DashboardToolbar({
                         onClick={onToggleAddWidgetMode}
                         className={cn(
                           "rounded-xl gap-2",
-                          isAddWidgetMode && "bg-blue-50 text-blue-700 border-blue-200"
+                          isAddWidgetMode
+                            ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
+                            : "text-gray-700 dark:text-gray-300"
                         )}
                       >
                         <Plus size={16} />
@@ -102,7 +105,7 @@ export function DashboardToolbar({
                       <Button
                         variant="outline"
                         onClick={onAutoOrganize}
-                        className="rounded-xl gap-2 border-gray-200 dark:border-gray-700"
+                        className="rounded-xl gap-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
                       >
                         <Zap size={16} className="text-amber-500" />
                         <span className="font-semibold leading-none">Magic Layout</span>
@@ -123,7 +126,9 @@ export function DashboardToolbar({
                     onClick={onToggleFixedHeight}
                     className={cn(
                       "rounded-xl border-gray-200 dark:border-gray-700",
-                      isFixedHeight && "text-blue-600 bg-blue-50 border-blue-100"
+                      isFixedHeight
+                        ? "text-blue-600 bg-blue-50 border-blue-100 dark:text-blue-400 dark:bg-blue-900/30 dark:border-blue-800"
+                        : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
                     )}
                   >
                     {isFixedHeight ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
@@ -138,10 +143,16 @@ export function DashboardToolbar({
         </div>
 
         <div className="relative flex items-center gap-2">
+          {customActions && (
+            <div className="flex items-center gap-2 pr-2 mr-2 border-r border-gray-100 dark:border-gray-700">
+              {customActions as any}
+            </div>
+          )}
+
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-xl text-gray-400"
+            className="rounded-xl text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
           >
             <Settings size={20} />

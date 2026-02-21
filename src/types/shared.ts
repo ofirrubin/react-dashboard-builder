@@ -135,6 +135,7 @@ export interface DashboardProps<TNode, TComponent, TToolbarProps> {
   gridMode?: GridMode;
   showDefaultToolbar?: boolean;
   customToolbar?: (props: TToolbarProps) => TNode;
+  customToolbarActions?: (isEditMode: boolean) => TNode;
   toolbarClassName?: string;
   onEditModeChange?: (isEditMode: boolean) => void;
   onAddWidgetModeChange?: (isAddWidgetMode: boolean) => void;
@@ -161,6 +162,7 @@ export interface DashboardToolbarProps<TNode, TComponent> {
   availableWidgetTypes?: WidgetType<TNode, TComponent>[];
   gridMode?: GridMode;
   onGridModeChange?: (mode: GridMode) => void;
+  customActions?: TNode;
 }
 
 export interface BasicWidgetProps extends BaseWidgetProps { }

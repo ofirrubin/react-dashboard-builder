@@ -60,6 +60,7 @@ export default function Dashboard({
   onEditModeChange,
   onAddWidgetModeChange,
   onFixedHeightChange,
+  customToolbarActions,
   controller: externalController,
 }: DashboardProps) {
   const renderWidgetContent = useMemo(() => createWidgetRenderer({ widgetRegistry }), [widgetRegistry]);
@@ -93,7 +94,7 @@ export default function Dashboard({
 
   const [nextId, setNextId] = useState(() => {
     if (initialItems.length === 0) return 1;
-    const maxId = Math.max(...initialItems.map(item => parseInt(item.id) || 0));
+    const maxId = Math.max(...initialItems.map((item: any) => parseInt(item.id) || 0));
     return maxId + 1;
   });
 
@@ -781,11 +782,11 @@ export default function Dashboard({
           )}>
             {item.title}
           </span>
-          {!isPreview && isEditMode && (
+          {!isPreview && (isEditMode || item.onMenuClick) && (
             <div className="flex items-center gap-1">
               {item.onMenuClick && (
                 <button
-                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
                     item.onMenuClick?.(e as any);
@@ -795,13 +796,15 @@ export default function Dashboard({
                   {item.menuIcon || <MoreHorizontal size={16} />}
                 </button>
               )}
-              <button
-                onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-              >
-                <X size={16} />
-              </button>
+              {isEditMode && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -892,6 +895,7 @@ export default function Dashboard({
           availableWidgetTypes={availableWidgetTypes}
           gridMode={internalGridMode}
           onGridModeChange={setInternalGridMode}
+          customActions={customToolbarActions ? customToolbarActions(isEditMode) as any : undefined}
         />
       )}
 
