@@ -598,7 +598,7 @@ export default function Dashboard({
       type: widgetConfig.type, title: widgetConfig.title,
     };
 
-    const safePosData = findSafePosition(tempItemForPositioning, items, false);
+    const safePosData = findSafePosition(tempItemForPositioning, items, true);
 
     const newItem: GridItem = {
       id: nextId.toString(),
@@ -631,11 +631,16 @@ export default function Dashboard({
     if (!isEditMode) return;
 
     const sorted = [...items].sort((a, b) => {
+      const aArea = (a.originalW ?? a.w) * (a.originalH ?? a.h);
+      const bArea = (b.originalW ?? b.w) * (b.originalH ?? b.h);
+
+      // Secondary sort: top-to-bottom, left-to-right (visual order)
       const aY = a.originalY ?? a.y;
       const bY = b.originalY ?? b.y;
       const aX = a.originalX ?? a.x;
       const bX = b.originalX ?? b.x;
-      return aY - bY || aX - bX || parseInt(a.id) - parseInt(b.id);
+
+      return bArea - aArea || aY - bY || aX - bX || parseInt(a.id) - parseInt(b.id);
     });
 
     const organized: GridItem[] = [];
@@ -843,10 +848,10 @@ export default function Dashboard({
     if (internalGridMode === 'dots') {
       return (
         <div
-          className="absolute pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
+          className="absolute pointer-events-none opacity-20 dark:opacity-20"
           style={{
             ...baseStyle,
-            backgroundImage: `radial-gradient(circle at center, currentColor 1.5px, transparent 1.5px)`,
+            backgroundImage: `radial-gradient(circle at center, #94A3B8 1.5px, transparent 1.5px)`,
             backgroundPosition: `${CELL_SIZE / 2}px ${CELL_SIZE / 2}px`,
           }}
         />
