@@ -12,15 +12,22 @@ bun add rud-dashboard
 
 ## Setup
 
-### 1. Import the Tailwind Preset
+### 1. Style Setup
 
+#### For Tailwind CSS v4 (Recommended)
+Add to your main CSS file:
+```css
+@import "rud-dashboard";
+```
+
+#### For Tailwind CSS v3
 Update your `tailwind.config.js`:
 
 ```javascript
 import rudPreset from 'rud-dashboard/tailwind.preset'
 
 export default {
-  presets: [rdbPreset],
+  presets: [rudPreset],
   content: [
     "./src/**/*.{js,ts,jsx,tsx}",
     "./node_modules/rud-dashboard/**/*.{js,ts,jsx,tsx}",
@@ -28,10 +35,7 @@ export default {
 }
 ```
 
-### 2. Add CSS Variables
-
-Add to your main CSS file (e.g., `globals.css` or `index.css`):
-
+Then import the styles in your main CSS file:
 ```css
 @import 'rud-dashboard/styles.css';
 ```
