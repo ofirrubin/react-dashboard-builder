@@ -42,3 +42,5 @@ temp/
 
 # Currently not yet fully implemented
 example/
+*storybook.log
+storybook-static
