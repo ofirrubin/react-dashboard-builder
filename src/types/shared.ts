@@ -49,8 +49,8 @@ export interface WidgetType<TNode, TComponent> {
     h: number;
   };
   description: string;
-  component: TComponent;
-  preview: TComponent;
+  component: TComponent | null;
+  preview: TComponent | null;
   onMenuClick?: (event: MouseEvent | TouchEvent) => void;
   menuIcon?: TNode;
 }
@@ -92,6 +92,7 @@ export interface SerializedDashboardItem {
   originalY?: number;
   originalW?: number;
   originalH?: number;
+  onMenuClick?: (event: MouseEvent | TouchEvent) => void;
 }
 
 export interface SerializedDashboard {
@@ -141,6 +142,9 @@ export interface DashboardProps<TNode, TComponent, TToolbarProps> {
   onAddWidgetModeChange?: (isAddWidgetMode: boolean) => void;
   onFixedHeightChange?: (isFixedHeight: boolean) => void;
   controller?: DashboardController<TNode>;
+  style?: Record<string, any>;
+  innerClassName?: string;
+  innerStyle?: Record<string, any>;
 }
 
 export interface DashboardToolbarProps<TNode, TComponent> {

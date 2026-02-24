@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Dashboard } from 'rud-dashboard'
 import 'rud-dashboard/styles.css'
 import './App.css'
-import { Info, Upload, Download, RefreshCw, MoreHorizontal, Edit, Copy, Trash2, Share2, Save, Send } from 'lucide-react'
+import { MoreHorizontal, Edit, Copy, Save, Send } from 'lucide-react'
 
 export default function App() {
   const [showDropdown, setShowDropdown] = useState(false)
@@ -19,7 +19,7 @@ export default function App() {
   }
 
   // Define available widget types with icons
-  const availableWidgets = [
+  const availableWidgets: any[] = [
     {
       id: 'basic',
       type: 'basic',
@@ -35,29 +35,16 @@ export default function App() {
   // The custom action buttons to inject into the toolbar
   const renderCustomActions = (isEditMode: boolean) => {
     return (
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div className="toolbar-actions-group">
         <button
           onClick={() => alert("Dashboard Saved!")}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 16px', borderRadius: '8px',
-            backgroundColor: isEditMode ? '#10b981' : '#3b82f6',
-            color: 'white', border: 'none', cursor: 'pointer',
-            fontWeight: '600', fontSize: '14px',
-            transition: 'background-color 0.2s'
-          }}
+          className={`toolbar-btn toolbar-btn-primary ${isEditMode ? 'edit-mode' : ''}`}
         >
           <Save size={16} /> {isEditMode ? 'Save Layout' : 'Save State'}
         </button>
         <button
           onClick={() => alert("Report Sent!")}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 16px', borderRadius: '8px',
-            backgroundColor: 'transparent',
-            color: '#475569', border: '1px solid #cbd5e1', cursor: 'pointer',
-            fontWeight: '600', fontSize: '14px'
-          }}
+          className="toolbar-btn toolbar-btn-secondary"
         >
           <Send size={16} /> Send Report
         </button>
@@ -77,21 +64,18 @@ export default function App() {
       {showDropdown && (
         <>
           <div
-            style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+            className="dropdown-overlay"
             onClick={() => setShowDropdown(false)}
           />
           <div
-            style={{
-              position: 'fixed', zIndex: 50, width: '12rem', borderRadius: '0.375rem',
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', background: 'white',
-              border: '1px solid #e2e8f0', top: dropdownPosition.top, left: dropdownPosition.left
-            }}
+            className="dropdown-menu"
+            style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
           >
             <div style={{ padding: '0.25rem 0' }}>
-              <button style={{ width: '100%', textAlign: 'left', padding: '0.5rem 1rem', display: 'flex', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setShowDropdown(false)}>
+              <button className="dropdown-item" onClick={() => setShowDropdown(false)}>
                 <Edit size={16} /> Edit Widget
               </button>
-              <button style={{ width: '100%', textAlign: 'left', padding: '0.5rem 1rem', display: 'flex', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setShowDropdown(false)}>
+              <button className="dropdown-item" onClick={() => setShowDropdown(false)}>
                 <Copy size={16} /> Duplicate
               </button>
             </div>
@@ -117,7 +101,7 @@ export default function App() {
             h: 4,
             onMenuClick: handleMenuClick,
             menuIcon: <MoreHorizontal size={14} />
-          }
+          } as any
         ]}
       />
 

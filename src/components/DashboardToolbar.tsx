@@ -124,6 +124,7 @@ export function DashboardToolbar({
                     variant="outline"
                     size="icon"
                     onClick={onToggleFixedHeight}
+                    aria-label={isFixedHeight ? 'Auto height' : 'Fixed viewport'}
                     className={cn(
                       "rounded-xl border-gray-200 dark:border-gray-700",
                       isFixedHeight
@@ -152,6 +153,7 @@ export function DashboardToolbar({
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Grid Settings"
             className="rounded-xl text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
           >

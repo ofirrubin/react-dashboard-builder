@@ -1,16 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@source "./**/*.{js,ts,jsx,tsx}";
 
 @layer base {
     :root {
-        --background: 210 40% 98%; /* Off-white #F4F7FA */
+        --background: 210 40% 98%;
+        /* Off-white #F4F7FA */
         --foreground: 222 47% 11%;
         --card: 0 0% 100%;
         --card-foreground: 222 47% 11%;
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
-        --primary: 221 83% 53%; /* Electric Blue #3B82F6 */
+        --primary: 221 83% 53%;
+        /* Electric Blue #3B82F6 */
         --primary-foreground: 210 40% 98%;
         --secondary: 210 40% 96.1%;
         --secondary-foreground: 222 47% 11%;
@@ -23,7 +24,8 @@
         --border: 214.3 31.8% 91.4%;
         --input: 214.3 31.8% 91.4%;
         --ring: 221 83% 53%;
-        --radius: 1rem; /* Large border-radius 16px */
+        --radius: 1rem;
+        /* Large border-radius 16px */
     }
 
     .dark {

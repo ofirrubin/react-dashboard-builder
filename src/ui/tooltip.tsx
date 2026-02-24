@@ -103,6 +103,11 @@ export function TooltipContent({
   const contentRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [isPositioned, setIsPositioned] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (!context) throw new Error("TooltipContent must be used within Tooltip");
 
@@ -144,7 +149,7 @@ export function TooltipContent({
     }
   }, [open, updatePosition]);
 
-  if (!open) return null;
+  if (!open || !mounted || typeof window === 'undefined') return null;
 
   const style: React.CSSProperties = {
     top: position.top,

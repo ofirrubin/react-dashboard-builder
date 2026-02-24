@@ -30,6 +30,8 @@
     "build": "tsup && bunx @tailwindcss/cli -i ./src/styles.css -o ./dist/styles.css",
     "pack:local": "bun run build && bun pm pack",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:react": "vite --config vite.test-react.config.ts",
     "test:preact": "vite --config vite.test-preact.config.ts"
   },
@@ -57,20 +59,25 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.8.0",
+    "@tailwindcss/cli": "^4.2.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
+    "jsdom": "^28.1.0",
     "lucide-preact": "^0.556.0",
     "postcss": "^8.4.32",
     "preact": "^10.19.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "tailwindcss": "^3.4.0",
+    "tailwindcss": "^4.2.0",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "vitest": "^4.0.18"
   },
   "keywords": [
     "dashboard",

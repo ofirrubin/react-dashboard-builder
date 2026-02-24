@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks'
 import { Dashboard } from 'rud-dashboard/preact'
 import 'rud-dashboard/styles.css'
 import './app.css'
-import { Settings, Upload, Download, RefreshCw, MoreHorizontal, Edit, Copy, Trash2, Share2 } from 'lucide-preact'
+import { MoreHorizontal, Edit, Copy } from 'lucide-preact'
 
 export function App() {
   const [showDropdown, setShowDropdown] = useState(false)
@@ -19,7 +19,7 @@ export function App() {
   }
 
   // Define available widget types with icons
-  const availableWidgets = [
+  const availableWidgets: any[] = [
     {
       id: 'basic',
       type: 'basic',
@@ -64,21 +64,18 @@ export function App() {
       {showDropdown && (
         <>
           <div
-            style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+            className="dropdown-overlay"
             onClick={() => setShowDropdown(false)}
           />
           <div
-            style={{
-              position: 'fixed', zIndex: 50, width: '12rem', borderRadius: '0.375rem',
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', background: 'white',
-              border: '1px solid #e2e8f0', top: dropdownPosition.top, left: dropdownPosition.left
-            }}
+            className="dropdown-menu"
+            style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
           >
             <div style={{ padding: '0.25rem 0' }}>
-              <button style={{ width: '100%', textAlign: 'left', padding: '0.5rem 1rem', display: 'flex', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setShowDropdown(false)}>
+              <button className="dropdown-item" onClick={() => setShowDropdown(false)}>
                 <Edit size={16} /> Edit Widget
               </button>
-              <button style={{ width: '100%', textAlign: 'left', padding: '0.5rem 1rem', display: 'flex', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setShowDropdown(false)}>
+              <button className="dropdown-item" onClick={() => setShowDropdown(false)}>
                 <Copy size={16} /> Duplicate
               </button>
             </div>
@@ -104,7 +101,7 @@ export function App() {
             onMenuClick: handleMenuClick,
             menuIcon: <MoreHorizontal size={14} />
           }
-        ]}
+        ] as any}
       />
 
       <div className="success-message">

@@ -45,6 +45,123 @@ const createWidgetRenderer = ({ widgetRegistry }: WidgetRendererProps) => (item:
   });
 };
 
+interface DashboardItemProps {
+  item: GridItem;
+  isPreview?: boolean;
+  isActive: boolean;
+  isEditMode: boolean;
+  onMouseDown: (e: any, item: GridItem, isPreview: boolean) => void;
+  onRemove: (id: string) => void;
+}
+
+const DashboardItemMemo = (React.memo as any)(({
+  item,
+  isPreview = false,
+  isActive,
+  isEditMode,
+  onMouseDown,
+  onRemove
+}: DashboardItemProps) => {
+  const gridToPixel = (gridX: number, gridY: number) => ({
+    x: gridX * CELL_SIZE + (gridX > 0 ? gridX * MARGIN : 0) + CONTAINER_PADDING,
+    y: gridY * CELL_SIZE + (gridY > 0 ? gridY * MARGIN : 0) + CONTAINER_PADDING
+  });
+
+  const pos = gridToPixel(item.x, item.y);
+  const itemWidth = Math.max(0, item.w);
+  const itemHeight = Math.max(0, item.h);
+
+  const size = {
+    width: itemWidth * GRID_SIZE + (itemWidth > 0 ? (itemWidth - 1) * MARGIN : 0),
+    height: itemHeight * GRID_SIZE + (itemHeight > 0 ? (itemHeight - 1) * MARGIN : 0)
+  };
+
+  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    onMouseDown(e, item, isPreview);
+  };
+
+  return (
+    <div
+      key={`${isPreview ? 'preview-' : ''}${item.id}`}
+      className={cn(
+        "group absolute rounded-2xl border transition-all duration-300",
+        isPreview
+          ? "bg-blue-100/50 border-blue-400 border-2 opacity-80 z-50 shadow-blue-500/20 shadow-xl"
+          : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-md hover:shadow-xl z-10",
+        isActive && !isPreview && "opacity-40 scale-[0.98] select-none",
+        isEditMode && !isPreview ? "cursor-grab active:cursor-grabbing" : "cursor-default",
+        item.isAnimating && "transition-all"
+      )}
+      style={{ left: pos.x, top: pos.y, width: size.width, height: size.height }}
+      onMouseDown={handleMouseDown as any}
+      onTouchStart={handleMouseDown as any}
+    >
+      {!isPreview && isEditMode && (
+        <>
+          <div className="absolute top-0 left-0 w-6 h-6 cursor-nw-resize z-20" />
+          <div className="absolute top-0 right-0 w-6 h-6 cursor-ne-resize z-20" />
+          <div className="absolute bottom-0 left-0 w-6 h-6 cursor-sw-resize z-20" />
+          <div className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize z-20" />
+        </>
+      )}
+
+      <div
+        className={cn(
+          "flex items-center justify-between px-4 py-3 text-sm font-semibold select-none border-b",
+          isPreview ? "border-blue-200" : "border-gray-100 dark:border-gray-700"
+        )}
+      >
+        <span className={cn(
+          "truncate",
+          isPreview ? "text-blue-700" : "text-gray-800 dark:text-gray-100"
+        )}>
+          {item.title}
+        </span>
+        {!isPreview && (isEditMode || item.onMenuClick) && (
+          <div className="flex items-center gap-1">
+            {item.onMenuClick && (
+              <button
+                aria-label="Widget options"
+                className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  item.onMenuClick?.(e as any);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                {item.menuIcon || <MoreHorizontal size={16} />}
+              </button>
+            )}
+            {isEditMode && (
+              <button
+                aria-label="Remove widget"
+                onClick={(e) => { e.stopPropagation(); onRemove(item.id); }}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="p-4 h-[calc(100%-52px)] overflow-auto">
+        {item.content ? item.content() : null}
+      </div>
+    </div>
+  );
+}, (prev: Readonly<DashboardItemProps>, next: Readonly<DashboardItemProps>) => {
+  return prev.item.x === next.item.x &&
+    prev.item.y === next.item.y &&
+    prev.item.w === next.item.w &&
+    prev.item.h === next.item.h &&
+    prev.item.id === next.item.id &&
+    prev.item.isAnimating === next.item.isAnimating &&
+    prev.isActive === next.isActive &&
+    prev.isEditMode === next.isEditMode &&
+    prev.isPreview === next.isPreview;
+});
+
 export default function Dashboard({
   availableWidgetTypes = [],
   initialItems = [],
@@ -62,6 +179,9 @@ export default function Dashboard({
   onFixedHeightChange,
   customToolbarActions,
   controller: externalController,
+  style,
+  innerClassName,
+  innerStyle,
 }: DashboardProps) {
   const renderWidgetContent = useMemo(() => createWidgetRenderer({ widgetRegistry }), [widgetRegistry]);
 
@@ -683,137 +803,71 @@ export default function Dashboard({
     }, ANIMATION_DURATION);
   };
 
-  const renderItem = (item: GridItem, isPreview = false) => {
-    const pos = gridToPixel(item.x, item.y);
-    const itemWidth = Math.max(0, item.w);
-    const itemHeight = Math.max(0, item.h);
+  const handleMouseDownOnWidget = useCallback((e: any, item: GridItem, isPreview: boolean) => {
+    if (!isEditMode || isPreview) return;
 
-    const size = {
-      width: itemWidth * GRID_SIZE + (itemWidth > 0 ? (itemWidth - 1) * MARGIN : 0),
-      height: itemHeight * GRID_SIZE + (itemHeight > 0 ? (itemHeight - 1) * MARGIN : 0)
-    };
+    const clientX = 'touches' in e ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
+
+    const cornerSize = 20;
+    const isInTopLeft = mouseX <= cornerSize && mouseY <= cornerSize;
+    const isInTopRight = mouseX >= rect.width - cornerSize && mouseY <= cornerSize;
+    const isInBottomLeft = mouseX <= cornerSize && mouseY >= rect.height - cornerSize;
+    const isInBottomRight = mouseX >= rect.width - cornerSize && mouseY >= rect.height - cornerSize;
+
+    if (isInTopLeft || isInTopRight || isInBottomLeft || isInBottomRight) {
+      let handle = '';
+      if (isInTopLeft) handle = 'nw';
+      else if (isInTopRight) handle = 'ne';
+      else if (isInBottomLeft) handle = 'sw';
+      else if (isInBottomRight) handle = 'se';
+
+      const gridContentRect = containerRef.current?.getBoundingClientRect();
+      if (!gridContentRect) return;
+
+      setResizeState({
+        id: item.id,
+        startX: clientX - gridContentRect.left - CONTAINER_PADDING,
+        startY: clientY - gridContentRect.top - CONTAINER_PADDING,
+        originalItem: { ...item },
+        handle
+      });
+      setPreview({ ...item });
+    } else {
+      const gridContentRect = containerRef.current?.getBoundingClientRect();
+      if (!gridContentRect) return;
+
+      const mouseXInGridContent = clientX - gridContentRect.left - CONTAINER_PADDING;
+      const mouseYInGridContent = clientY - gridContentRect.top - CONTAINER_PADDING;
+      const itemPixelPos = gridToPixel(item.x, item.y);
+
+      setDragState({
+        id: item.id,
+        startX: mouseXInGridContent - itemPixelPos.x,
+        startY: mouseYInGridContent - itemPixelPos.y,
+        originalItem: { ...item }
+      });
+      setPreview({ ...item });
+    }
+  }, [isEditMode, gridToPixel, setResizeState, setDragState, setPreview]);
+
+  const renderItem = useCallback((item: GridItem, isPreview = false) => {
     const isActive = dragState?.id === item.id || resizeState?.id === item.id;
-
-    const handleMouseDownOnWidget = (e: any) => {
-      if (!isEditMode || isPreview) return;
-
-      const clientX = 'touches' in e ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
-      const clientY = 'touches' in e ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const mouseX = clientX - rect.left;
-      const mouseY = clientY - rect.top;
-
-      const cornerSize = 20;
-      const isInTopLeft = mouseX <= cornerSize && mouseY <= cornerSize;
-      const isInTopRight = mouseX >= rect.width - cornerSize && mouseY <= cornerSize;
-      const isInBottomLeft = mouseX <= cornerSize && mouseY >= rect.height - cornerSize;
-      const isInBottomRight = mouseX >= rect.width - cornerSize && mouseY >= rect.height - cornerSize;
-
-      if (isInTopLeft || isInTopRight || isInBottomLeft || isInBottomRight) {
-        let handle = '';
-        if (isInTopLeft) handle = 'nw';
-        else if (isInTopRight) handle = 'ne';
-        else if (isInBottomLeft) handle = 'sw';
-        else if (isInBottomRight) handle = 'se';
-
-        const gridContentRect = containerRef.current?.getBoundingClientRect();
-        if (!gridContentRect) return;
-
-        setResizeState({
-          id: item.id,
-          startX: clientX - gridContentRect.left - CONTAINER_PADDING,
-          startY: clientY - gridContentRect.top - CONTAINER_PADDING,
-          originalItem: { ...item },
-          handle
-        });
-        setPreview({ ...item });
-      } else {
-        const gridContentRect = containerRef.current?.getBoundingClientRect();
-        if (!gridContentRect) return;
-
-        const mouseXInGridContent = clientX - gridContentRect.left - CONTAINER_PADDING;
-        const mouseYInGridContent = clientY - gridContentRect.top - CONTAINER_PADDING;
-        const itemPixelPos = gridToPixel(item.x, item.y);
-
-        setDragState({
-          id: item.id,
-          startX: mouseXInGridContent - itemPixelPos.x,
-          startY: mouseYInGridContent - itemPixelPos.y,
-          originalItem: { ...item }
-        });
-        setPreview({ ...item });
-      }
-    };
-
     return (
-      <div
+      <DashboardItemMemo
         key={`${isPreview ? 'preview-' : ''}${item.id}`}
-        className={cn(
-          "group absolute rounded-2xl border transition-all duration-300",
-          isPreview
-            ? "bg-blue-100/50 border-blue-400 border-2 opacity-80 z-50 shadow-blue-500/20 shadow-xl"
-            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-md hover:shadow-xl z-10",
-          isActive && !isPreview && "opacity-40 scale-[0.98] select-none",
-          isEditMode && !isPreview ? "cursor-grab active:cursor-grabbing" : "cursor-default",
-          item.isAnimating && "transition-all"
-        )}
-        style={{ left: pos.x, top: pos.y, width: size.width, height: size.height }}
+        item={item}
+        isPreview={isPreview}
+        isActive={isActive}
+        isEditMode={isEditMode}
         onMouseDown={handleMouseDownOnWidget}
-        onTouchStart={handleMouseDownOnWidget}
-      >
-        {!isPreview && isEditMode && (
-          <>
-            <div className="absolute top-0 left-0 w-6 h-6 cursor-nw-resize z-20" />
-            <div className="absolute top-0 right-0 w-6 h-6 cursor-ne-resize z-20" />
-            <div className="absolute bottom-0 left-0 w-6 h-6 cursor-sw-resize z-20" />
-            <div className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize z-20" />
-          </>
-        )}
-
-        <div
-          className={cn(
-            "flex items-center justify-between px-4 py-3 text-sm font-semibold select-none border-b",
-            isPreview ? "border-blue-200" : "border-gray-100 dark:border-gray-700"
-          )}
-        >
-          <span className={cn(
-            "truncate",
-            isPreview ? "text-blue-700" : "text-gray-800 dark:text-gray-100"
-          )}>
-            {item.title}
-          </span>
-          {!isPreview && (isEditMode || item.onMenuClick) && (
-            <div className="flex items-center gap-1">
-              {item.onMenuClick && (
-                <button
-                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    item.onMenuClick?.(e as any);
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  {item.menuIcon || <MoreHorizontal size={16} />}
-                </button>
-              )}
-              {isEditMode && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="p-4 h-[calc(100%-52px)] overflow-auto">
-          {item.content ? item.content() : null}
-        </div>
-      </div>
+        onRemove={removeItem}
+      />
     );
-  };
+  }, [dragState?.id, resizeState?.id, isEditMode, handleMouseDownOnWidget, removeItem]);
 
   const dashboardActions: DashboardActions = {
     toggleEditMode,
@@ -879,7 +933,7 @@ export default function Dashboard({
   };
 
   return (
-    <div className={cn("flex flex-col gap-6 p-6 bg-[#F4F7FA] dark:bg-[#0F172A] min-h-screen", className)}>
+    <div className={cn("flex flex-col gap-6 p-6 w-full min-h-screen", className)} style={style}>
       {showDefaultToolbar && !customToolbar && (
         <DashboardToolbar
           isEditMode={isEditMode}
@@ -909,12 +963,13 @@ export default function Dashboard({
         <div
           ref={containerRef}
           className={cn(
-            "relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-[32px] w-full transition-all duration-500",
+            "relative w-full rounded-[32px] transition-all duration-500",
             maxHeight ? "overflow-auto" : "overflow-hidden",
             isEditMode && "ring-4 ring-blue-500/5 border-blue-200 dark:border-blue-900",
-            (dragState || resizeState) && "select-none"
+            (dragState || resizeState) && "select-none",
+            innerClassName
           )}
-          style={{ height: gridDimensions.height, minHeight: MIN_CONTAINER_HEIGHT, padding: CONTAINER_PADDING }}
+          style={{ height: gridDimensions.height, minHeight: MIN_CONTAINER_HEIGHT, padding: CONTAINER_PADDING, ...innerStyle }}
         >
           {renderGrid()}
           <div
