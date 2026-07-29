@@ -1,0 +1,47 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "dashboard-widgets",
+  "title": "Dashboard widgets",
+  "author": "Ofir Rubin",
+  "description": "Ready-made widget bodies: stat, progress, chart, and Typeset-styled prose.",
+  "dependencies": [
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "chart",
+    "progress",
+    "@rud/dashboard-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/rud/widgets/stat-widget.tsx",
+      "content": "import { TrendingDownIcon, TrendingUpIcon } from \"lucide-react\"\n\nimport { cn } from \"@/lib/utils\"\nimport { Badge } from \"@/components/ui/badge\"\n\nexport interface StatWidgetProps {\n  label: string\n  value: string\n  /** Change since the previous period, e.g. \"+20.1%\". */\n  delta?: string\n  trend?: \"up\" | \"down\" | \"flat\"\n  /** Small note under the value, e.g. \"vs. last month\". */\n  hint?: string\n  className?: string\n}\n\n/**\n * A single headline number.\n *\n * Every colour here comes from a theme token, so the widget follows the host\n * app's palette and dark mode with no `dark:` overrides of its own.\n */\nexport function StatWidget({\n  label,\n  value,\n  delta,\n  trend = \"flat\",\n  hint,\n  className,\n}: StatWidgetProps) {\n  const TrendIcon = trend === \"up\" ? TrendingUpIcon : trend === \"down\" ? TrendingDownIcon : null\n\n  return (\n    <div className={cn(\"flex h-full flex-col justify-center gap-1\", className)}>\n      <span className=\"text-muted-foreground text-xs font-medium tracking-wide uppercase\">\n        {label}\n      </span>\n      <div className=\"flex flex-wrap items-baseline gap-2\">\n        <span className=\"text-2xl font-semibold tabular-nums\">{value}</span>\n        {delta && (\n          <Badge variant={trend === \"down\" ? \"destructive\" : \"secondary\"}>\n            {TrendIcon && <TrendIcon data-icon=\"inline-start\" />}\n            {delta}\n          </Badge>\n        )}\n      </div>\n      {hint && <span className=\"text-muted-foreground text-xs\">{hint}</span>}\n    </div>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/dashboard/widgets/stat-widget.tsx"
+    },
+    {
+      "path": "registry/rud/widgets/progress-widget.tsx",
+      "content": "import { cn } from \"@/lib/utils\"\nimport { Progress } from \"@/components/ui/progress\"\n\nexport interface ProgressWidgetRow {\n  label: string\n  value: number\n  max?: number\n  /** Optional right-hand caption. Defaults to a percentage. */\n  caption?: string\n}\n\nexport interface ProgressWidgetProps {\n  rows: ProgressWidgetRow[]\n  className?: string\n}\n\n/** A stack of labelled progress bars — quotas, goals, capacity. */\nexport function ProgressWidget({ rows, className }: ProgressWidgetProps) {\n  return (\n    <div className={cn(\"flex h-full flex-col justify-center gap-3\", className)}>\n      {rows.map((row) => {\n        const max = row.max ?? 100\n        const percent = max === 0 ? 0 : Math.round((row.value / max) * 100)\n        return (\n          <div key={row.label} className=\"flex flex-col gap-1.5\">\n            <div className=\"flex items-baseline justify-between gap-2\">\n              <span className=\"truncate text-sm font-medium\">{row.label}</span>\n              <span className=\"text-muted-foreground text-xs tabular-nums\">\n                {row.caption ?? `${percent}%`}\n              </span>\n            </div>\n            <Progress value={percent} aria-label={`${row.label}: ${percent}%`} />\n          </div>\n        )\n      })}\n    </div>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/dashboard/widgets/progress-widget.tsx"
+    },
+    {
+      "path": "registry/rud/widgets/chart-widget.tsx",
+      "content": "\"use client\"\n\nimport { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis } from \"recharts\"\n\nimport { cn } from \"@/lib/utils\"\nimport {\n  ChartContainer,\n  ChartTooltip,\n  ChartTooltipContent,\n  type ChartConfig,\n} from \"@/components/ui/chart\"\n\nexport interface ChartWidgetProps {\n  data: { label: string; value: number }[]\n  /** Legend/tooltip name for the series. */\n  seriesName?: string\n  variant?: \"bar\" | \"area\"\n  /** Any chart token, e.g. \"var(--chart-1)\". */\n  color?: string\n  className?: string\n}\n\n/**\n * A compact chart sized to fill its grid cell.\n *\n * `ChartContainer` defaults to `aspect-video`; a dashboard widget has a height\n * fixed by the grid instead, so we swap in `aspect-auto` and fill the cell.\n *\n * Animation is off deliberately. The grid re-measures on resize, and replaying\n * a grow-from-zero intro on every measure both looks broken and can leave bars\n * stranded at zero height if measures arrive faster than the animation.\n */\nexport function ChartWidget({\n  data,\n  seriesName = \"Value\",\n  variant = \"bar\",\n  color = \"var(--chart-1)\",\n  className,\n}: ChartWidgetProps) {\n  const config = {\n    value: { label: seriesName, color },\n  } satisfies ChartConfig\n\n  const axis = (\n    <>\n      <CartesianGrid vertical={false} />\n      <XAxis\n        dataKey=\"label\"\n        tickLine={false}\n        axisLine={false}\n        tickMargin={8}\n        minTickGap={8}\n      />\n      <ChartTooltip content={<ChartTooltipContent />} />\n    </>\n  )\n\n  return (\n    <ChartContainer\n      config={config}\n      className={cn(\"aspect-auto h-full w-full\", className)}\n    >\n      {variant === \"area\" ? (\n        <AreaChart data={data} margin={{ left: 4, right: 4, top: 4 }}>\n          {axis}\n          <Area\n            dataKey=\"value\"\n            type=\"natural\"\n            stroke=\"var(--color-value)\"\n            fill=\"var(--color-value)\"\n            fillOpacity={0.2}\n            strokeWidth={2}\n            isAnimationActive={false}\n          />\n        </AreaChart>\n      ) : (\n        <BarChart data={data} margin={{ left: 4, right: 4, top: 4 }}>\n          {axis}\n          <Bar dataKey=\"value\" fill=\"var(--color-value)\" radius={4} isAnimationActive={false} />\n        </BarChart>\n      )}\n    </ChartContainer>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/dashboard/widgets/chart-widget.tsx"
+    },
+    {
+      "path": "registry/rud/widgets/notes-widget.tsx",
+      "content": "import { cn } from \"@/lib/utils\"\n\nexport interface NotesWidgetProps {\n  /**\n   * Rendered prose. Pass a markdown renderer's output, streamed assistant\n   * output, or plain JSX — Typeset styles the resulting elements either way.\n   */\n  children: React.ReactNode\n  className?: string\n}\n\n/**\n * A prose widget styled by Typeset.\n *\n * Text-heavy widgets are where a dashboard usually falls apart: headings and\n * lists arrive unstyled because the surrounding app resets them, so every\n * project re-styles the same elements by hand. Typeset handles all of it from\n * one CSS file, driven by three custom properties.\n *\n * `typeset-widget` tightens the rhythm for a small grid cell. It is defined in\n * the dashboard theme CSS; adjust it there, or override inline:\n *\n *     <NotesWidget className=\"[--typeset-flow:1.5em]\">…</NotesWidget>\n */\nexport function NotesWidget({ children, className }: NotesWidgetProps) {\n  return (\n    <div className={cn(\"typeset typeset-widget h-full overflow-auto\", className)}>\n      {children}\n    </div>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/dashboard/widgets/notes-widget.tsx"
+    }
+  ],
+  "docs": "These are ordinary components — edit or delete them freely. They take data as props and hold no state, so they work outside the dashboard too.",
+  "categories": [
+    "dashboard"
+  ],
+  "type": "registry:block"
+}

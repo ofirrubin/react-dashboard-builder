@@ -1,107 +1,33 @@
 {
-  "name": "rud-dashboard",
-  "version": "0.1.6",
+  "name": "rud-dashboard-workspace",
+  "private": true,
+  "version": "0.2.0",
+  "description": "Monorepo for rud-dashboard: a headless layout engine on npm, and a shadcn registry that ships the UI as editable source.",
   "author": "Ofir Rubin",
-  "description": "A flexible dashboard component library with drag-and-drop, resize, and grid layout support for React and Preact",
+  "license": "MIT",
   "type": "module",
-  "main": "./dist/react/index.cjs",
-  "module": "./dist/react/index.js",
-  "types": "./dist/react/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/react/index.d.ts",
-      "import": "./dist/react/index.js",
-      "require": "./dist/react/index.cjs"
-    },
-    "./preact": {
-      "types": "./dist/preact/index.preact.d.ts",
-      "import": "./dist/preact/index.preact.js",
-      "require": "./dist/preact/index.preact.cjs"
-    },
-    "./tailwind.preset": "./tailwind.preset.js",
-    "./styles.css": "./dist/styles.css"
-  },
-  "files": [
-    "dist",
-    "tailwind.preset.js"
+  "workspaces": [
+    "packages/*",
+    "examples/*"
   ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsup && bunx @tailwindcss/cli -i ./src/styles.css -o ./dist/styles.css",
-    "pack:local": "bun run build && bun pm pack",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:react": "vite --config vite.test-react.config.ts",
-    "test:preact": "vite --config vite.test-preact.config.ts",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
-  },
-  "peerDependencies": {
-    "preact": "^10.0.0",
-    "react": "^18.0.0 || ^17.0.0",
-    "react-dom": "^18.0.0 || ^17.0.0"
-  },
-  "peerDependenciesMeta": {
-    "preact": {
-      "optional": true
-    },
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    }
-  },
-  "dependencies": {
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.0",
-    "lucide-react": "^0.344.0",
-    "tailwind-merge": "^2.2.0"
+    "build": "npm run build --workspace=rud-dashboard && npm run registry:build",
+    "registry:build": "shadcn build",
+    "registry:serve": "npm run registry:build && npx --yes http-server public -p 4499 --cors -s",
+    "test": "npm run test --workspace=rud-dashboard",
+    "typecheck": "npm run typecheck --workspace=rud-dashboard",
+    "example:react": "npm run dev --workspace=examples-react-vite",
+    "example:preact": "npm run dev --workspace=examples-preact-vite"
   },
   "devDependencies": {
-    "@preact/preset-vite": "^2.8.0",
-    "@storybook/addon-a11y": "8.6.17",
-    "@storybook/addon-docs": "8.6.17",
-    "@storybook/addon-essentials": "8.6.17",
-    "@storybook/react": "8.6.17",
-    "@storybook/react-vite": "8.6.17",
-    "@storybook/test": "8.6.17",
-    "@tailwindcss/cli": "^4.2.0",
-    "@tailwindcss/vite": "^4.2.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@types/node": "^20.10.0",
-    "@types/react": "^18.2.45",
-    "@types/react-dom": "^18.2.18",
-    "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.16",
-    "jsdom": "^28.1.0",
-    "lucide-preact": "^0.556.0",
-    "postcss": "^8.4.32",
-    "preact": "^10.19.3",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "storybook": "8.6.17",
-    "tailwindcss": "^4.2.0",
-    "tsup": "^8.0.1",
-    "typescript": "^5.3.3",
-    "vite": "^8.0.5",
-    "vitest": "^4.0.18"
+    "shadcn": "^4.16.0"
   },
-  "keywords": [
-    "dashboard",
-    "react",
-    "preact",
-    "dashboard builder",
-    "interactive",
-    "drag and drop"
-  ],
   "homepage": "https://github.com/ofirrubin/react-dashboard-builder",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ofirrubin/react-dashboard-builder.git",
-    "directory": "packages/react-dashboard-builder"
+    "url": "git+https://github.com/ofirrubin/react-dashboard-builder.git"
   },
-  "license": "MIT"
+  "allowScripts": {
+    "esbuild@0.27.7": true
+  }
 }

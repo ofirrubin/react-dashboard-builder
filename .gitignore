@@ -8,6 +8,9 @@ yarn-error.log*
 dist/
 build/
 
+# The built registry JSON is intentionally NOT ignored: a hosted registry
+# serves public/r/*.json, so those files have to be committed.
+
 # TypeScript
 *.tsbuildinfo
 
@@ -40,7 +43,4 @@ temp/
 # Packed files
 *.tgz
 
-# Currently not yet fully implemented
-example/
 *storybook.log
-storybook-static

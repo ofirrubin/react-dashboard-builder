@@ -1,0 +1,151 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "dashboard-theme",
+  "title": "Dashboard theme",
+  "author": "Ofir Rubin",
+  "description": "Optional polish: layered depth, drag feedback, and a compact prose rhythm for widget text.",
+  "files": [],
+  "cssVars": {
+    "theme": {
+      "--dashboard-lift": "0 1px 2px -1px oklch(0% 0 0 / 0.08), 0 4px 12px -4px oklch(0% 0 0 / 0.10)",
+      "--dashboard-lift-hover": "0 2px 4px -2px oklch(0% 0 0 / 0.10), 0 12px 28px -8px oklch(0% 0 0 / 0.16)",
+      "--dashboard-lift-active": "0 8px 20px -4px oklch(0% 0 0 / 0.18), 0 24px 48px -12px oklch(0% 0 0 / 0.22)"
+    }
+  },
+  "css": {
+    "@layer components": {
+      "[data-slot=dashboard-item]": {
+        "box-shadow": "var(--dashboard-lift)",
+        "transition-property": "box-shadow, transform, opacity",
+        "transition-duration": "180ms",
+        "transition-timing-function": "cubic-bezier(0.2, 0, 0, 1)",
+        "&:hover": {
+          "box-shadow": "var(--dashboard-lift-hover)"
+        },
+        "&[data-editing]:hover": {
+          "transform": "translateY(-1px)"
+        },
+        "&[data-active]": {
+          "box-shadow": "var(--dashboard-lift-active)"
+        }
+      },
+      "[data-slot=dashboard-item] > [data-slot=card-header]": {
+        "background-image": "linear-gradient(to bottom, color-mix(in oklab, var(--muted) 45%, transparent), transparent)"
+      },
+      "[data-slot=dashboard-canvas][data-editing]": {
+        "box-shadow": "inset 0 0 0 1px color-mix(in oklab, var(--primary) 18%, transparent)"
+      },
+      "[data-slot=dashboard-preview]": {
+        "animation": "dashboard-preview-pulse 1.4s ease-in-out infinite"
+      }
+    },
+    "@keyframes dashboard-preview-pulse": {
+      "0%, 100%": {
+        "opacity": "1"
+      },
+      "50%": {
+        "opacity": "0.62"
+      }
+    },
+    "@media (prefers-reduced-motion: reduce)": {
+      "[data-slot=dashboard-item], [data-slot=dashboard-preview]": {
+        "transition": "none",
+        "animation": "none"
+      }
+    },
+    ".typeset-widget": {
+      "--typeset-size": "0.8125rem",
+      "--typeset-leading": "1.6",
+      "--typeset-flow": "0.85em"
+    },
+    "@layer base": {
+      ":where(.typeset)": {
+        "font-size": "var(--typeset-size, 0.875rem)",
+        "line-height": "var(--typeset-leading, 1.7)",
+        "color": "var(--foreground)"
+      },
+      ":where(.typeset) :where(h1, h2, h3, h4, h5, h6)": {
+        "font-weight": "600",
+        "line-height": "1.25",
+        "margin-block-start": "var(--typeset-flow, 1em)",
+        "text-wrap": "balance"
+      },
+      ":where(.typeset) :where(h1)": {
+        "font-size": "1.5em"
+      },
+      ":where(.typeset) :where(h2)": {
+        "font-size": "1.25em"
+      },
+      ":where(.typeset) :where(h3)": {
+        "font-size": "1.0625em"
+      },
+      ":where(.typeset) :where(p, ul, ol, blockquote, pre, table, hr)": {
+        "margin-block-start": "var(--typeset-flow, 1em)"
+      },
+      ":where(.typeset) > :where(:first-child)": {
+        "margin-block-start": "0"
+      },
+      ":where(.typeset) :where(ul, ol)": {
+        "padding-inline-start": "1.5em"
+      },
+      ":where(.typeset) :where(ul)": {
+        "list-style-type": "disc"
+      },
+      ":where(.typeset) :where(ol)": {
+        "list-style-type": "decimal"
+      },
+      ":where(.typeset) :where(li)": {
+        "margin-block-start": "calc(var(--typeset-flow, 1em) * 0.35)"
+      },
+      ":where(.typeset) :where(a)": {
+        "color": "var(--primary)",
+        "text-decoration-line": "underline",
+        "text-underline-offset": "2px"
+      },
+      ":where(.typeset) :where(strong)": {
+        "font-weight": "600"
+      },
+      ":where(.typeset) :where(code)": {
+        "font-family": "var(--font-mono, ui-monospace, monospace)",
+        "font-size": "0.875em",
+        "background-color": "var(--muted)",
+        "border-radius": "calc(var(--radius) - 4px)",
+        "padding": "0.15em 0.35em"
+      },
+      ":where(.typeset) :where(pre)": {
+        "font-family": "var(--font-mono, ui-monospace, monospace)",
+        "font-size": "0.8125em",
+        "background-color": "var(--muted)",
+        "border-radius": "var(--radius)",
+        "padding": "0.75em 1em",
+        "overflow-x": "auto"
+      },
+      ":where(.typeset) :where(pre) :where(code)": {
+        "background-color": "transparent",
+        "padding": "0"
+      },
+      ":where(.typeset) :where(blockquote)": {
+        "border-inline-start": "2px solid var(--border)",
+        "padding-inline-start": "1em",
+        "color": "var(--muted-foreground)"
+      },
+      ":where(.typeset) :where(hr)": {
+        "border-color": "var(--border)"
+      },
+      ":where(.typeset) :where(.not-typeset, [data-not-typeset]) :where(*)": {
+        "margin-block-start": "revert",
+        "font-size": "revert",
+        "line-height": "revert"
+      },
+      ":where(.typeset) :where(p, li, blockquote)": {
+        "text-wrap": "pretty"
+      }
+    }
+  },
+  "docs": "Entirely optional — the dashboard already looks correct on your theme tokens without it.\n\nThis adds three things:\n  1. Layered depth and drag feedback, hooked onto [data-slot=dashboard-*] so no component file changes.\n  2. A compact `.typeset-widget` rhythm preset for prose widgets.\n  3. A small `.typeset` prose layer, in case you have not installed shadcn Typeset.\n\nAlready using Typeset? Its own CSS covers item 3; keep this item only for the depth and the `.typeset-widget` preset, and delete the `:where(.typeset)` rules from your CSS file.\n\nAll shadows use `oklch`/`color-mix` against your existing tokens, so light and dark both follow the host theme automatically.",
+  "categories": [
+    "dashboard",
+    "theme"
+  ],
+  "type": "registry:theme"
+}
