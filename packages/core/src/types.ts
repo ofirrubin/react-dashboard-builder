@@ -100,6 +100,8 @@ export interface GridMetrics {
   cols: number;
   /** Rows currently allocated. */
   rows: number;
+  /** True when content exceeds the height cap and the canvas must scroll. */
+  scrolls: boolean;
 }
 
 /** Which corner or edge a resize gesture is pulling. */

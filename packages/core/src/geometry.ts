@@ -123,21 +123,73 @@ export function canvasHeight(rows: number, frame: GridFrame): number {
   return rows * rowPitch(frame) - frame.gap + frame.padding * 2;
 }
 
+/** How many whole rows fit inside a canvas of `height` px. */
+export function rowsForHeight(height: number, frame: GridFrame): number {
+  return Math.max(1, Math.floor((height - frame.padding * 2 + frame.gap) / rowPitch(frame)));
+}
+
+export interface MeasureOptions {
+  /** Cap the canvas height, in px. Omit or `null` to grow with the content. */
+  maxHeight?: number | null;
+  /**
+   * What happens when the content is taller than `maxHeight`.
+   *
+   * `scroll` — the canvas stops growing and scrolls. Items may live below the
+   * fold. This is the usual choice for a dashboard you keep adding to.
+   *
+   * `clamp` — the grid itself is limited to the rows that fit, so nothing can be
+   * placed out of sight. Use it when the dashboard has to occupy an exact box,
+   * e.g. a fixed panel or a print/export target.
+   */
+  maxHeightMode?: 'scroll' | 'clamp';
+  /** Spare rows kept below the lowest item, for dropping something new. */
+  slack?: number;
+}
+
 /** Measure everything the renderer needs from a container width. */
 export function measureGrid(
   containerWidth: number,
   items: readonly GridRect[],
   grid: GridConfig,
-  opts: { fixedHeight?: number | null; slack?: number } = {}
+  { maxHeight = null, maxHeightMode = 'scroll', slack }: MeasureOptions = {}
 ): GridMetrics {
   const frame = resolveFrame(containerWidth, grid);
-  const rows = measureRows(items, frame, { slack: opts.slack, minHeight: grid.minHeight });
+  const naturalRows = measureRows(items, frame, { slack, minHeight: grid.minHeight });
+
+  if (maxHeight == null) {
+    return {
+      frame,
+      width: containerWidth,
+      cols: frame.columns,
+      rows: naturalRows,
+      height: Math.max(grid.minHeight, canvasHeight(naturalRows, frame)),
+      scrolls: false,
+    };
+  }
+
+  const capRows = rowsForHeight(maxHeight, frame);
+
+  if (maxHeightMode === 'clamp') {
+    const rows = Math.min(naturalRows, capRows);
+    return {
+      frame,
+      width: containerWidth,
+      cols: frame.columns,
+      rows,
+      height: Math.max(grid.minHeight, canvasHeight(rows, frame)),
+      scrolls: false,
+    };
+  }
+
+  // Scroll: never grow past the cap, but do not pad out to it either.
+  const natural = canvasHeight(naturalRows, frame);
   return {
     frame,
     width: containerWidth,
     cols: frame.columns,
-    rows,
-    height: opts.fixedHeight ?? Math.max(grid.minHeight, canvasHeight(rows, frame)),
+    rows: naturalRows,
+    height: Math.max(grid.minHeight, Math.min(natural, maxHeight)),
+    scrolls: natural > maxHeight,
   };
 }
 

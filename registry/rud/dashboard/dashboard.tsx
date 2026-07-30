@@ -37,8 +37,22 @@ export interface DashboardProps {
   editable?: boolean
   /** Canvas background treatment. */
   gridStyle?: GridStyle
-  /** Override grid geometry — cell size, gap, padding, span limits. */
+  /** Override grid geometry — columns, rowHeight, gap, padding, span limits. */
   grid?: Partial<GridConfig>
+  /**
+   * Cap the canvas height, in px. The toolbar's "Limit height" switch turns this
+   * on; without it that switch falls back to 2.5x the minimum height.
+   */
+  maxHeight?: number
+  /**
+   * What the cap does.
+   *
+   * `scroll` (default) — the canvas stops growing and scrolls; widgets may sit
+   * below the fold.
+   * `clamp` — the grid is limited to the rows that fit, so nothing can be placed
+   * out of sight. Drag, the drop indicator, and keyboard nudges all respect it.
+   */
+  maxHeightMode?: "scroll" | "clamp"
   /**
    * `false` hides the toolbar. A function replaces it, receiving the same api
    * the built-in toolbar uses.
@@ -101,6 +115,8 @@ export function Dashboard({
   editable = true,
   gridStyle: gridStyleProp,
   grid: gridOverrides,
+  maxHeight,
+  maxHeightMode,
   toolbar = true,
   toolbarActions,
   emptyState,
@@ -115,6 +131,8 @@ export function Dashboard({
     defaultEditing,
     onEditingChange,
     grid: gridOverrides,
+    maxHeight,
+    maxHeightMode,
   })
 
   const {
@@ -200,7 +218,9 @@ export function Dashboard({
           className={cn(
             "group/canvas bg-card/40 relative w-full rounded-xl border transition-colors",
             isEditing && "border-primary/30 bg-primary/[0.02]",
-            isFixedHeight ? "overflow-auto" : "overflow-hidden",
+            // Only scroll when the content genuinely exceeds the cap; a capped
+            // canvas that happens to fit should not show a scrollbar.
+            metrics.scrolls ? "overflow-auto" : "overflow-hidden",
             activeId && "touch-none select-none"
           )}
           style={{

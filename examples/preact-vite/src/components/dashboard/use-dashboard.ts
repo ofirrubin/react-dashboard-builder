@@ -84,6 +84,7 @@ function sameMetrics(a: GridMetrics, b: GridMetrics): boolean {
     a.height === b.height &&
     a.cols === b.cols &&
     a.rows === b.rows &&
+    a.scrolls === b.scrolls &&
     a.frame.columns === b.frame.columns &&
     a.frame.colWidth === b.frame.colWidth &&
     a.frame.rowHeight === b.frame.rowHeight &&
@@ -142,6 +143,15 @@ export interface UseDashboardOptions {
   defaultEditing?: boolean
   onEditingChange?: (editing: boolean) => void
   grid?: Partial<GridConfig>
+  /**
+   * Cap the canvas height, in px. Omit to grow with the content.
+   *
+   * The toolbar's "Limit height" switch turns this on and off; without it, that
+   * switch falls back to a default of `2.5x` the minimum height.
+   */
+  maxHeight?: number
+  /** `scroll` (default) caps the box and scrolls; `clamp` limits the grid rows. */
+  maxHeightMode?: "scroll" | "clamp"
 }
 
 /**
@@ -190,6 +200,8 @@ export function useDashboard({
   defaultEditing = false,
   onEditingChange,
   grid: gridOverrides,
+  maxHeight,
+  maxHeightMode = "scroll",
 }: UseDashboardOptions) {
   const grid = React.useMemo<GridConfig>(
     () => ({ ...DEFAULT_GRID, ...gridOverrides }),
@@ -212,13 +224,16 @@ export function useDashboard({
     height: grid.minHeight,
     cols: resolveColumns(0, grid.columns),
     rows: 1,
+    scrolls: false,
   }))
 
   /** Only commit metrics that actually differ, preserving object identity. */
   const setMetrics = React.useCallback((next: GridMetrics) => {
     setMetricsState((current) => (sameMetrics(current, next) ? current : next))
   }, [])
-  const [fixedHeight, setFixedHeight] = React.useState<number | null>(null)
+  const [heightCapped, setHeightCapped] = React.useState(false)
+  /** The cap actually in force: null means "grow with the content". */
+  const heightCap = heightCapped ? (maxHeight ?? Math.round(grid.minHeight * 2.5)) : null
   const [isAddWidgetMode, setAddWidgetMode] = React.useState(false)
   const [gesture, setGesture] = React.useState<Gesture | null>(null)
   const [preview, setPreview] = React.useState<GridRect | null>(null)
@@ -239,6 +254,12 @@ export function useDashboard({
   metricsRef.current = metrics
   const previewRef = React.useRef(preview)
   previewRef.current = preview
+  /**
+   * In `clamp` mode nothing may be placed below the last visible row — that is
+   * the whole point of the mode, so gestures have to respect it too.
+   */
+  const clampRowsRef = React.useRef(false)
+  clampRowsRef.current = heightCap !== null && maxHeightMode === "clamp"
 
   /* ------------------------------- measuring ------------------------------ */
 
@@ -261,9 +282,9 @@ export function useDashboard({
           minSpan: grid.minSpan,
         })
         setItems(reflowed as SerializedItem[])
-        setMetrics(measureGrid(width, reflowed, grid, { fixedHeight }))
+        setMetrics(measureGrid(width, reflowed, grid, { maxHeight: heightCap, maxHeightMode }))
       } else {
-        setMetrics(measureGrid(width, itemsRef.current, grid, { fixedHeight }))
+        setMetrics(measureGrid(width, itemsRef.current, grid, { maxHeight: heightCap, maxHeightMode }))
       }
     }
 
@@ -271,13 +292,13 @@ export function useDashboard({
     const observer = new ResizeObserver(measure)
     observer.observe(element)
     return () => observer.disconnect()
-  }, [grid, fixedHeight, setItems, setMetrics])
+  }, [grid, heightCap, maxHeightMode, setItems, setMetrics])
 
   // Keep the canvas height in step with the items themselves.
   React.useEffect(() => {
     const width = metricsRef.current.width
-    if (width > 0) setMetrics(measureGrid(width, items, grid, { fixedHeight }))
-  }, [items, grid, fixedHeight, setMetrics])
+    if (width > 0) setMetrics(measureGrid(width, items, grid, { maxHeight: heightCap, maxHeightMode }))
+  }, [items, grid, heightCap, maxHeightMode, setMetrics])
 
   /* ------------------------------- gestures ------------------------------- */
 
@@ -363,9 +384,11 @@ export function useDashboard({
       if (gesture.kind === "drag") {
         const held = previewRef.current
         const span = held?.w ?? 1
+        const spanH = held?.h ?? 1
+        const maxY = clampRowsRef.current ? Math.max(0, rows - spanH) : Number.POSITIVE_INFINITY
         const targetCell = {
           x: clamp(cell.x, 0, Math.max(0, cols - span)),
-          y: Math.max(0, cell.y),
+          y: clamp(cell.y, 0, maxY),
         }
         // Remembered so the settle timer can snap without a pointer event.
         snappedPxRef.current = gridToPixel(targetCell.x, targetCell.y, frame)
@@ -390,10 +413,13 @@ export function useDashboard({
         if (!current) return current
 
         if (gesture.kind === "drag") {
+          const limitY = clampRowsRef.current
+            ? Math.max(0, rows - current.h)
+            : Number.POSITIVE_INFINITY
           return {
             ...current,
             x: clamp(cell.x, 0, Math.max(0, cols - current.w)),
-            y: Math.max(0, cell.y),
+            y: clamp(cell.y, 0, limitY),
           }
         }
 
@@ -523,7 +549,10 @@ export function useDashboard({
       const w = clamp(current.w + (delta.w ?? 0), grid.minSpan, Math.min(grid.maxSpan, cols))
       const h = clamp(current.h + (delta.h ?? 0), grid.minSpan, grid.maxSpan)
       const x = clamp(current.x + (delta.x ?? 0), 0, Math.max(0, cols - w))
-      const y = Math.max(0, current.y + (delta.y ?? 0))
+      const maxY = clampRowsRef.current
+        ? Math.max(0, metricsRef.current.rows - h)
+        : Number.POSITIVE_INFINITY
+      const y = clamp(current.y + (delta.y ?? 0), 0, maxY)
 
       const moved = itemsRef.current.map((item) =>
         item.id === id
@@ -570,8 +599,8 @@ export function useDashboard({
   )
 
   const toggleFixedHeight = React.useCallback(() => {
-    setFixedHeight((current) => (current === null ? Math.round(grid.minHeight * 2.5) : null))
-  }, [grid.minHeight])
+    setHeightCapped((current) => !current)
+  }, [])
 
   return {
     // state
@@ -585,7 +614,9 @@ export function useDashboard({
     /** False until the canvas has been measured once. */
     isMeasured: metrics.width > 0,
     activeId: gesture?.id ?? null,
-    isFixedHeight: fixedHeight !== null,
+    isFixedHeight: heightCapped,
+    /** True when the canvas is capped and must scroll to show everything. */
+    scrolls: metrics.scrolls,
     isAddWidgetMode: isEditing && isAddWidgetMode,
     canvasRef,
     widgets,

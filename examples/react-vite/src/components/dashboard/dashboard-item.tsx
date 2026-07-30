@@ -16,13 +16,42 @@ import {
 } from "@/components/ui/card"
 
 /**
- * Resize affordances. Corners show a dot on hover; edges are invisible strips.
+ * Resize affordances. Corners show a dot on hover; edges are invisible hit strips.
  *
- * These are deliberately 24px rather than the usual 40px minimum hit area: a
- * one-column widget is only ~64px wide, so 40px corners would overlap each
- * other and overlapping hit areas are worse than small ones. Keyboard resize
- * (shift + arrows) is the accessible path.
+ * The dots sit 8–16px inside each corner, which is further in than the card's
+ * 12px padding — so rather than move them, the card makes room: on hover the
+ * header and content ease their padding outward (see `INSET_ON_HOVER` below) and
+ * the dots land in the gap that opens up. The mark stays in one place and never
+ * covers a chart or a line of text.
+ *
+ * 24px hit area rather than the usual 40px minimum: a one-column widget is only
+ * ~64px wide, so 40px corners would overlap each other, and overlapping hit
+ * areas are worse than small ones. Keyboard resize (shift + arrows) is the
+ * accessible path.
  */
+/**
+ * The inset that opens up in edit mode, freeing the corners for the resize dots.
+ * Applied to the header and the content so the whole inside draws in together —
+ * it reads as the card growing a frame, not as text jumping.
+ *
+ * Only `padding` transitions. That does reflow the content box, so two guards
+ * apply below: it is skipped on cards too small to spare the room, and the
+ * transition is dropped while a gesture is running so it never animates a reflow
+ * on top of a resize.
+ */
+const INSET = "group-hover/item:px-5 group-focus-visible/item:px-5"
+const INSET_Y = "group-hover/item:py-5 group-focus-visible/item:py-5"
+const INSET_TRANSITION =
+  "motion-safe:transition-[padding] motion-safe:duration-200 " +
+  "motion-safe:ease-[cubic-bezier(0.2,0,0,1)]"
+
+/**
+ * Below this the inset would eat the content area rather than frame it — a
+ * 1x1 cell is only ~64x56px, and 20px of padding leaves almost nothing.
+ */
+const MIN_WIDTH_FOR_INSET = 170
+const MIN_HEIGHT_FOR_INSET = 130
+
 const HANDLES: { handle: ResizeHandle; className: string; corner: boolean }[] = [
   { handle: "nw", className: "top-0 left-0 size-6 cursor-nwse-resize", corner: true },
   { handle: "ne", className: "top-0 right-0 size-6 cursor-nesw-resize", corner: true },
@@ -67,6 +96,16 @@ function DashboardItemComponent({
 }: DashboardItemProps) {
   const slot = gridToPixel(item.x, item.y, frame)
   const size = spanToPixels(item.w, item.h, frame)
+
+  /**
+   * Only inset cards with room to spare, and hold the transition still during a
+   * gesture: resizing already changes the box every frame, and animating padding
+   * at the same time makes charts re-measure repeatedly and look like they are
+   * fighting the pointer.
+   */
+  const canInset =
+    isEditing && size.width >= MIN_WIDTH_FOR_INSET && size.height >= MIN_HEIGHT_FOR_INSET
+  const insetClasses = canInset && [INSET, !isActive && INSET_TRANSITION]
 
   // While held, the card paints where the pointer is rather than in its slot.
   const isHeld = Boolean(float)
@@ -160,7 +199,12 @@ function DashboardItemComponent({
         button ends up jammed against the title. Only padding, gap, and
         alignment are overridden.
       */}
-      <CardHeader className="relative z-20 shrink-0 items-center gap-0 border-b px-3 py-2">
+      <CardHeader
+        className={cn(
+          "relative z-20 shrink-0 items-center gap-0 border-b px-3 py-2",
+          insetClasses
+        )}
+      >
         <CardTitle className="flex min-w-0 items-center gap-1.5 text-sm">
           {isEditing && (
             <GripVerticalIcon
@@ -191,7 +235,16 @@ function DashboardItemComponent({
         )}
       </CardHeader>
 
-      <CardContent className="min-h-0 flex-1 overflow-auto p-3">{children}</CardContent>
+      <CardContent
+        className={cn(
+          "min-h-0 flex-1 overflow-auto p-3",
+          insetClasses,
+          // Vertical too, so the bottom corners are clear as well.
+          canInset && INSET_Y
+        )}
+      >
+        {children}
+      </CardContent>
 
       {isEditing &&
         HANDLES.map(({ handle, className, corner }) => (
@@ -209,7 +262,7 @@ function DashboardItemComponent({
               className,
               corner && [
                 "after:bg-primary after:absolute after:inset-2 after:rounded-full",
-                "after:opacity-0 after:transition-opacity after:duration-150",
+                "after:opacity-0 after:transition-opacity after:duration-200",
                 // Scoped to this item: hinting on every widget at once whenever the
                 // pointer is anywhere in the canvas is just noise.
                 "group-hover/item:after:opacity-40 group-focus-visible/item:after:opacity-60",

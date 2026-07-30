@@ -35,8 +35,10 @@ export {
   resolveColumns,
   resolveFrame,
   rowPitch,
+  rowsForHeight,
   spanToPixels,
 } from './geometry';
+export type { MeasureOptions } from './geometry';
 
 export {
   applyResize,

@@ -92,6 +92,25 @@ notes: {
 }
 ```
 
+### Limiting the height
+
+By default the canvas grows with its content. Cap it with `maxHeight`, and pick
+what the cap means:
+
+```tsx
+// Stop at 600px and scroll. Widgets may sit below the fold.
+<Dashboard widgets={w} maxHeight={600} />
+
+// Stop at 600px and limit the grid to the rows that fit, so nothing can be
+// placed out of sight. Drag, the drop indicator, and keyboard nudges all obey it.
+<Dashboard widgets={w} maxHeight={600} maxHeightMode="clamp" />
+```
+
+The toolbar's "Fixed height" switch turns the cap on and off. Without `maxHeight`
+it falls back to 2.5x the minimum height. `useDashboard` also returns `scrolls`,
+true only when the content actually exceeds the cap — a capped canvas that
+happens to fit shows no scrollbar.
+
 ### Keyboard
 
 Widgets are focusable in edit mode. Arrows move; `shift` + arrows resize.

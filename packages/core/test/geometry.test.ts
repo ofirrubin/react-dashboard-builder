@@ -10,6 +10,7 @@ import {
   resolveColumns,
   resolveFrame,
   rowPitch,
+  rowsForHeight,
   spanToPixels,
 } from '../src/geometry';
 import type { GridConfig } from '../src/types';
@@ -154,8 +155,48 @@ describe('measureRows / canvasHeight', () => {
 });
 
 describe('measureGrid', () => {
-  it('reports a fixed height verbatim when one is supplied', () => {
-    expect(measureGrid(WIDTH, [], grid, { fixedHeight: 321 }).height).toBe(321);
+  const tall = [{ id: 'a', x: 0, y: 0, w: 2, h: 40 }];
+
+  it('grows with the content when no cap is set', () => {
+    const m = measureGrid(WIDTH, tall, grid);
+    expect(m.rows).toBeGreaterThan(40);
+    expect(m.scrolls).toBe(false);
+  });
+
+  it('scroll mode stops at the cap and reports that it scrolls', () => {
+    const m = measureGrid(WIDTH, tall, grid, { maxHeight: 400 });
+    expect(m.height).toBe(400);
+    expect(m.scrolls).toBe(true);
+    // Rows are untouched: the items are still there, just below the fold.
+    expect(m.rows).toBeGreaterThan(rowsForHeight(400, m.frame));
+  });
+
+  it('scroll mode does not pad out to the cap when content is shorter', () => {
+    const m = measureGrid(WIDTH, [{ id: 'a', x: 0, y: 0, w: 2, h: 1 }], grid, {
+      maxHeight: 4000,
+    });
+    expect(m.height).toBeLessThan(4000);
+    expect(m.scrolls).toBe(false);
+  });
+
+  it('clamp mode limits the grid to the rows that fit, with no scroll', () => {
+    const m = measureGrid(WIDTH, tall, grid, { maxHeight: 400, maxHeightMode: 'clamp' });
+    expect(m.rows).toBe(rowsForHeight(400, m.frame));
+    expect(m.height).toBeLessThanOrEqual(400);
+    expect(m.scrolls).toBe(false);
+  });
+
+  it('never reports fewer rows than the content needs when under the cap', () => {
+    const short = [{ id: 'a', x: 0, y: 0, w: 2, h: 2 }];
+    const m = measureGrid(WIDTH, short, grid, { maxHeight: 4000, maxHeightMode: 'clamp' });
+    expect(m.rows).toBeGreaterThanOrEqual(3);
+  });
+
+  it('honours minHeight even with a tiny cap', () => {
+    for (const mode of ['scroll', 'clamp'] as const) {
+      const m = measureGrid(WIDTH, tall, grid, { maxHeight: 10, maxHeightMode: mode });
+      expect(m.height).toBeGreaterThanOrEqual(grid.minHeight);
+    }
   });
 
   it('keeps the column count stable across widths, unlike the old cell model', () => {
