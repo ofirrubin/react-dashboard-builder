@@ -36,3 +36,31 @@ export function ProgressWidget({ rows, className }: ProgressWidgetProps) {
     </div>
   )
 }
+
+const PREVIEW_ROWS = [
+  { fill: "72%", label: "w-10" },
+  { fill: "45%", label: "w-8" },
+  { fill: "88%", label: "w-12" },
+]
+
+/**
+ * Miniature for the add-widget bar. The bars fill as the bar opens, staggered,
+ * then rest at their real values — so it still reads as progress at rest.
+ */
+export function ProgressWidgetPreview() {
+  return (
+    <div className="flex h-full flex-col justify-center gap-2">
+      {PREVIEW_ROWS.map((row, index) => (
+        <div key={row.fill} className="flex flex-col gap-1">
+          <span className={cn("bg-muted-foreground/25 h-1 rounded-full", row.label)} />
+          <span className="bg-muted h-1.5 overflow-hidden rounded-full">
+            <span
+              className="bg-primary block h-full origin-left rounded-full motion-safe:[animation:dashboard-fill-x_520ms_cubic-bezier(0.2,0,0,1)_backwards]"
+              style={{ width: row.fill, animationDelay: `${index * 80}ms` }}
+            />
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}

@@ -68,6 +68,30 @@ Spans are grid cells on a **fixed 12-column grid with fluid column width**, so `
 <Dashboard widgets={widgets} grid={{ columns: 24, rowHeight: 48, gap: 8 }} />
 ```
 
+### Drag feel
+
+A dragged card lifts and follows the pointer exactly while you are moving it,
+with no transition to lag behind and no stepping between cells. The moment the
+pointer slows or stops, it eases into the slot the drop indicator is showing.
+Snapping on every pointer move is what makes a grid feel like it is catching on
+something. Tune it with `FREE_MOVE_SPEED` and `SETTLE_DELAY_MS` in
+`use-dashboard.ts`.
+
+### Adding widgets
+
+`Add widget` expands a bar in place rather than opening a popover, so you can
+see the dashboard you are adding to. Each entry shows a live miniature via
+`WidgetDefinition.preview`, which animates in as the bar opens and then rests at
+its real values:
+
+```tsx
+notes: {
+  title: "Release notes",
+  preview: () => <NotesWidgetPreview />,
+  render: () => <NotesWidget>…</NotesWidget>,
+}
+```
+
 ### Keyboard
 
 Widgets are focusable in edit mode. Arrows move; `shift` + arrows resize.

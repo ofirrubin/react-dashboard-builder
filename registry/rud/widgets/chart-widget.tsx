@@ -82,3 +82,32 @@ export function ChartWidget({
     </ChartContainer>
   )
 }
+
+const PREVIEW_BARS = [45, 80, 60, 95, 70]
+
+/**
+ * Miniature for the add-widget bar.
+ *
+ * Plain CSS bars rather than a real chart: recharts would mount a
+ * ResponsiveContainer and its own resize observer for every palette entry,
+ * which is a lot of machinery for an 80px thumbnail.
+ *
+ * The bars grow up as the bar opens, staggered, then rest at their real heights
+ * — so it reads as a chart even after the animation finishes. `scaleY` keeps the
+ * work on the compositor; animating `height` would relayout every frame.
+ */
+export function ChartWidgetPreview() {
+  return (
+    <div className="flex h-full items-end gap-1">
+      {PREVIEW_BARS.map((height, index) => (
+        <span
+          key={index}
+          // Uses the same chart token as the real widget, so the miniature is
+          // an honest preview of what gets placed.
+          className="flex-1 origin-bottom rounded-sm bg-[var(--chart-1)] opacity-80 motion-safe:[animation:dashboard-grow-y_460ms_cubic-bezier(0.2,0,0,1)_backwards]"
+          style={{ height: `${height}%`, animationDelay: `${index * 55}ms` }}
+        />
+      ))}
+    </div>
+  )
+}

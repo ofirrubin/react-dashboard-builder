@@ -7,6 +7,7 @@ import {
   PlusIcon,
   SettingsIcon,
   SparklesIcon,
+  XIcon,
 } from "lucide-react"
 import type { GridStyle } from "rud-dashboard"
 
@@ -37,8 +38,6 @@ import {
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
 
-import type { WidgetCatalog } from "./use-dashboard"
-
 const GRID_STYLES: { value: GridStyle; label: string }[] = [
   { value: "lines", label: "Lines" },
   { value: "dots", label: "Dots" },
@@ -47,12 +46,12 @@ const GRID_STYLES: { value: GridStyle; label: string }[] = [
 ]
 
 export interface DashboardToolbarProps {
-  widgets: WidgetCatalog
   itemCount: number
   isEditing: boolean
   editable?: boolean
   onEditingChange: (editing: boolean) => void
-  onAddWidget: (type: string) => void
+  isAddWidgetMode: boolean
+  onToggleAddWidgetMode: () => void
   onTidy: () => void
   gridStyle: GridStyle
   onGridStyleChange: (style: GridStyle) => void
@@ -63,12 +62,12 @@ export interface DashboardToolbarProps {
 }
 
 export function DashboardToolbar({
-  widgets,
   itemCount,
   isEditing,
   editable = true,
   onEditingChange,
-  onAddWidget,
+  isAddWidgetMode,
+  onToggleAddWidgetMode,
   onTidy,
   gridStyle,
   onGridStyleChange,
@@ -77,9 +76,6 @@ export function DashboardToolbar({
   className,
   children,
 }: DashboardToolbarProps) {
-  const [paletteOpen, setPaletteOpen] = React.useState(false)
-  const entries = Object.entries(widgets)
-
   return (
     <div
       data-slot="dashboard-toolbar"
@@ -115,67 +111,47 @@ export function DashboardToolbar({
 
       {isEditing && (
         <>
-          <Popover open={paletteOpen} onOpenChange={setPaletteOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                <PlusIcon data-icon="inline-start" />
-                Add widget
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={isAddWidgetMode ? "secondary" : "outline"}
+                size="sm"
+                aria-expanded={isAddWidgetMode}
+                onClick={onToggleAddWidgetMode}
+              >
+                {/*
+                  Both icons stay mounted and cross-fade, so the change animates
+                  in both directions without a motion library. Values per the
+                  interface-polish rules: scale 0.25 -> 1, blur 4px -> 0.
+                */}
+                <span
+                  data-icon="inline-start"
+                  className="relative inline-grid size-3.5 place-items-center"
+                >
+                  <PlusIcon
+                    className={cn(
+                      "absolute transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
+                      isAddWidgetMode
+                        ? "scale-[0.25] opacity-0 blur-[4px]"
+                        : "scale-100 opacity-100 blur-0"
+                    )}
+                  />
+                  <XIcon
+                    className={cn(
+                      "absolute transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
+                      isAddWidgetMode
+                        ? "scale-100 opacity-100 blur-0"
+                        : "scale-[0.25] opacity-0 blur-[4px]"
+                    )}
+                  />
+                </span>
+                {isAddWidgetMode ? "Close" : "Add widget"}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-80 p-1">
-              {entries.length === 0 ? (
-                <p className="text-muted-foreground p-4 text-center text-sm">
-                  No widgets registered.
-                </p>
-              ) : (
-                <div className="flex max-h-80 flex-col gap-1 overflow-auto">
-                  {entries.map(([type, definition]) => {
-                    const Icon = definition.icon
-                    const size = definition.defaultSize ?? { w: 4, h: 3 }
-                    return (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => {
-                          onAddWidget(type)
-                          setPaletteOpen(false)
-                        }}
-                        className={cn(
-                          "flex items-start gap-3 p-2 text-left",
-                          // Concentric: popover radius (--radius-lg) minus its p-1 inset.
-                          "rounded-sm",
-                          "hover:bg-accent hover:text-accent-foreground",
-                          "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
-                          // Specific properties only — never `transition-all`.
-                          "transition-[background-color,color,scale] duration-150",
-                          "active:scale-[0.96]"
-                        )}
-                      >
-                        {Icon && (
-                          <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-sm [&_svg]:size-4">
-                            <Icon />
-                          </span>
-                        )}
-                        <span className="flex min-w-0 flex-col gap-0.5">
-                          <span className="text-sm leading-none font-medium">
-                            {definition.title}
-                          </span>
-                          {definition.description && (
-                            <span className="text-muted-foreground text-xs">
-                              {definition.description}
-                            </span>
-                          )}
-                          <span className="text-muted-foreground/70 text-[11px] tabular-nums">
-                            {size.w}&times;{size.h}
-                          </span>
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isAddWidgetMode ? "Hide the widget bar" : "Browse available widgets"}
+            </TooltipContent>
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>

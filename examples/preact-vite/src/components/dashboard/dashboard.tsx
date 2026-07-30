@@ -17,6 +17,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 
 import { DashboardItem } from "./dashboard-item"
 import { DashboardToolbar } from "./dashboard-toolbar"
+import { DashboardWidgetBar } from "./dashboard-widget-bar"
 import { useDashboard } from "./use-dashboard"
 import type { DashboardApi, WidgetCatalog } from "./use-dashboard"
 
@@ -123,10 +124,13 @@ export function Dashboard({
     grid,
     preview,
     activeId,
+    float,
     isFixedHeight,
+    isAddWidgetMode,
     isMeasured,
     canvasRef,
     setEditing,
+    toggleAddWidgetMode,
     addWidget,
     removeWidget,
     tidy,
@@ -168,12 +172,12 @@ export function Dashboard({
       >
         {toolbar === true && (
           <DashboardToolbar
-            widgets={widgets}
             itemCount={items.length}
             isEditing={isEditing}
             editable={editable}
             onEditingChange={setEditing}
-            onAddWidget={addWidget}
+            isAddWidgetMode={isAddWidgetMode}
+            onToggleAddWidgetMode={toggleAddWidgetMode}
             onTidy={tidy}
             gridStyle={gridStyle}
             onGridStyleChange={setGridStyle}
@@ -184,6 +188,10 @@ export function Dashboard({
           </DashboardToolbar>
         )}
         {typeof toolbar === "function" && toolbar(api)}
+
+        {toolbar === true && isAddWidgetMode && (
+          <DashboardWidgetBar widgets={widgets} onAddWidget={addWidget} />
+        )}
 
         <div
           ref={canvasRef}
@@ -223,6 +231,7 @@ export function Dashboard({
                   frame={metrics.frame}
                   isEditing={isEditing}
                   isActive={activeId === item.id}
+                  float={activeId === item.id ? float : null}
                   onRemove={removeWidget}
                   onDragStart={beginDrag}
                   onResizeStart={beginResize}

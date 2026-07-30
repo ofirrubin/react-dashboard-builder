@@ -48,3 +48,25 @@ export function StatWidget({
     </div>
   )
 }
+
+/**
+ * Miniature for the add-widget bar.
+ *
+ * Purpose-built rather than a scaled-down `StatWidget`: at 80px tall the real
+ * type scale is unreadable, and a CSS transform would blur it.
+ */
+export function StatWidgetPreview() {
+  return (
+    <div className="flex h-full flex-col justify-center gap-1">
+      <span className="bg-muted-foreground/25 h-1.5 w-10 rounded-full" />
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-base leading-none font-semibold tabular-nums">$45.2k</span>
+        <Badge variant="secondary" className="px-1 py-0 text-[9px] leading-4">
+          <TrendingUpIcon data-icon="inline-start" />
+          20%
+        </Badge>
+      </div>
+      <span className="bg-muted-foreground/15 h-1 w-14 rounded-full" />
+    </div>
+  )
+}

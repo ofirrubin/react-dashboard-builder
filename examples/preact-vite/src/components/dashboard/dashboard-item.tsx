@@ -40,6 +40,12 @@ export interface DashboardItemProps {
   isEditing: boolean
   /** This item is the one currently being dragged or resized. */
   isActive: boolean
+  /**
+   * Pixel position to paint at while this card is being dragged, overriding its
+   * grid position. `snapping: false` means the pointer is moving fast and the
+   * card should track it exactly, with no transition to lag behind.
+   */
+  float?: { x: number; y: number; snapping: boolean } | null
   onRemove?: (id: string) => void
   onDragStart?: (event: React.PointerEvent<HTMLElement>, item: GridRect) => void
   onResizeStart?: (event: React.PointerEvent<HTMLElement>, item: GridRect, handle: ResizeHandle) => void
@@ -52,14 +58,21 @@ function DashboardItemComponent({
   frame,
   isEditing,
   isActive,
+  float,
   onRemove,
   onDragStart,
   onResizeStart,
   onNudge,
   children,
 }: DashboardItemProps) {
-  const position = gridToPixel(item.x, item.y, frame)
+  const slot = gridToPixel(item.x, item.y, frame)
   const size = spanToPixels(item.w, item.h, frame)
+
+  // While held, the card paints where the pointer is rather than in its slot.
+  const isHeld = Boolean(float)
+  const position = float ?? slot
+  // Tracking the pointer must be instantaneous; settling into a slot should ease.
+  const freeMoving = isHeld && !float!.snapping
 
   /**
    * Arrow keys move; Shift+arrows resize. Without this the grid is entirely
@@ -103,12 +116,22 @@ function DashboardItemComponent({
         "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
         // Never `transition-all`: it would animate colour, border, and layout
         // properties we never change, and fights the pointer during a drag.
-        "motion-safe:transition-[translate,width,height,box-shadow,opacity]",
-        "motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.2,0,0,1)]",
+        // Mutually exclusive with the free-moving case below rather than
+        // overridden with `!important` — Tailwind v4 spells that as a `!`
+        // suffix, and `!transition-none` silently does nothing.
+        !freeMoving && [
+          "motion-safe:transition-[translate,width,height,box-shadow,opacity,scale]",
+          "motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.2,0,0,1)]",
+        ],
+        // Tracking a fast pointer: any transition here reads as lag or rubber
+        // banding. Only the settle back into a slot animates.
+        freeMoving && "transition-none will-change-transform",
         isEditing && "cursor-grab active:cursor-grabbing",
-        // The dragged item follows the pointer, so it must not animate or
-        // swallow the pointer events the preview needs.
-        isActive && "pointer-events-none opacity-40 transition-none will-change-transform"
+        // Held: lifted above the grid, tracking the pointer. It must not
+        // intercept pointer events — the gesture is handled on window.
+        isHeld && "pointer-events-none z-30 scale-[1.02] shadow-xl",
+        // Resizing keeps the card in place; fade it so the indicator reads.
+        isActive && !isHeld && "pointer-events-none opacity-40 transition-none"
       )}
       style={{
         // Position via `translate` rather than left/top: the compositor can
@@ -214,6 +237,7 @@ export const DashboardItem = React.memo(
     prev.item.title === next.item.title &&
     prev.isEditing === next.isEditing &&
     prev.isActive === next.isActive &&
+    prev.float === next.float &&
     prev.frame === next.frame &&
     prev.children === next.children
 )

@@ -260,3 +260,17 @@
     --typeset-leading: 1.6;
     --typeset-flow: 0.85em;
 }
+
+@keyframes dashboard-grow-y {
+  from { transform: scaleY(0.04); opacity: 0.4; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes dashboard-fill-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot=dashboard-widget-bar] * { animation: none; transition: none; }
+}

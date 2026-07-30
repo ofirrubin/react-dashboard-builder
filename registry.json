@@ -151,6 +151,10 @@
           "[data-slot=dashboard-item], [data-slot=dashboard-preview]": {
             "transition": "none",
             "animation": "none"
+          },
+          "[data-slot=dashboard-widget-bar] *": {
+            "animation": "none",
+            "transition": "none"
           }
         },
         ".typeset-widget": {
@@ -239,6 +243,24 @@
           },
           ":where(.typeset) :where(p, li, blockquote)": {
             "text-wrap": "pretty"
+          }
+        },
+        "@keyframes dashboard-grow-y": {
+          "from": {
+            "transform": "scaleY(0.04)",
+            "opacity": "0.4"
+          },
+          "to": {
+            "transform": "scaleY(1)",
+            "opacity": "1"
+          }
+        },
+        "@keyframes dashboard-fill-x": {
+          "from": {
+            "transform": "scaleX(0)"
+          },
+          "to": {
+            "transform": "scaleX(1)"
           }
         }
       },

@@ -6,6 +6,7 @@ import {
   applyResize,
   clamp,
   findFreeSlot,
+  gridToPixel,
   measureGrid,
   nextItemId,
   packItems,
@@ -45,6 +46,13 @@ export interface WidgetDefinition {
   icon?: React.ElementType
   /** Span used when added from the palette. Defaults to 4x3. */
   defaultSize?: { w: number; h: number }
+  /**
+   * A miniature of the widget, shown in the add-widget bar.
+   *
+   * Far more useful than a name and an icon — you can see what you are about to
+   * place. Keep it cheap and static; it renders once per palette entry.
+   */
+  preview?: () => React.ReactNode
   /** Renders the widget body. */
   render: (context: WidgetRenderContext) => React.ReactNode
 }
@@ -84,10 +92,46 @@ function sameMetrics(a: GridMetrics, b: GridMetrics): boolean {
   )
 }
 
+/**
+ * Pointer speed, in px/ms, above which a dragged card stops snapping and just
+ * follows the pointer.
+ *
+ * ~0.35 px/ms is roughly 350px/s — a deliberate throw rather than a careful
+ * placement. Below it the card is being positioned, so it snaps.
+ */
+const FREE_MOVE_SPEED = 0.35
+
+/** How long the pointer must hold still before a free-moving card settles. */
+const SETTLE_DELAY_MS = 90
+
+/** Smoothing on the speed estimate. Raw per-event deltas are far too jittery. */
+const SPEED_SMOOTHING = 0.4
+
 /** An in-flight pointer gesture. */
 type Gesture =
-  | { kind: "drag"; id: string; grabX: number; grabY: number }
+  | {
+      kind: "drag"
+      id: string
+      /** Pointer offset inside the card at grab time, in px. */
+      grabPxX: number
+      grabPxY: number
+    }
   | { kind: "resize"; id: string; handle: ResizeHandle; startX: number; startY: number; origin: GridRect }
+
+/**
+ * Where a dragged card is actually painted.
+ *
+ * While the pointer is moving quickly the card renders at `x`/`y` directly, so
+ * it tracks the cursor 1:1 instead of stepping between cells. Once the pointer
+ * slows or stops, `snapping` flips true and the card eases into the slot the
+ * drop indicator is showing. Snapping on every move is what made dragging feel
+ * like it was catching on something.
+ */
+export interface DragFloat {
+  x: number
+  y: number
+  snapping: boolean
+}
 
 export interface UseDashboardOptions {
   widgets: WidgetCatalog
@@ -175,8 +219,17 @@ export function useDashboard({
     setMetricsState((current) => (sameMetrics(current, next) ? current : next))
   }, [])
   const [fixedHeight, setFixedHeight] = React.useState<number | null>(null)
+  const [isAddWidgetMode, setAddWidgetMode] = React.useState(false)
   const [gesture, setGesture] = React.useState<Gesture | null>(null)
   const [preview, setPreview] = React.useState<GridRect | null>(null)
+  const [float, setFloat] = React.useState<DragFloat | null>(null)
+
+  // Pointer-speed tracking for the free-move behaviour above.
+  const lastMoveRef = React.useRef<{ x: number; y: number; t: number } | null>(null)
+  const speedRef = React.useRef(0)
+  const settleTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Latest snapped pixel position, so the settle timer needs no pointer event. */
+  const snappedPxRef = React.useRef({ x: 0, y: 0 })
 
   // Mirrors of the latest values, so effects and callbacks can read "now"
   // without re-subscribing on every change.
@@ -240,9 +293,21 @@ export function useDashboard({
       if (!isEditing) return
       const point = pointerToCanvas(event)
       if (!point) return
-      const cell = pixelToGrid(point.x, point.y, metricsRef.current.frame)
-      setGesture({ kind: "drag", id: item.id, grabX: cell.x - item.x, grabY: cell.y - item.y })
+
+      // Grab offset in pixels, not cells: the card has to follow the pointer
+      // without jumping to align its corner under the cursor.
+      const at = gridToPixel(item.x, item.y, metricsRef.current.frame)
+      setGesture({
+        kind: "drag",
+        id: item.id,
+        grabPxX: point.x - at.x,
+        grabPxY: point.y - at.y,
+      })
       setPreview({ ...item })
+      setFloat({ x: at.x, y: at.y, snapping: true })
+      snappedPxRef.current = { x: at.x, y: at.y }
+      lastMoveRef.current = { x: point.x, y: point.y, t: event.timeStamp }
+      speedRef.current = 0
     },
     [isEditing, pointerToCanvas]
   )
@@ -277,7 +342,49 @@ export function useDashboard({
       const point = pointerToCanvas(event)
       if (!point) return
       const { cols, rows, frame } = metricsRef.current
-      const cell = pixelToGrid(point.x, point.y, frame)
+
+      // Smoothed pointer speed, in px/ms.
+      const previous = lastMoveRef.current
+      if (previous) {
+        const dt = Math.max(1, event.timeStamp - previous.t)
+        const distance = Math.hypot(point.x - previous.x, point.y - previous.y)
+        speedRef.current =
+          speedRef.current * (1 - SPEED_SMOOTHING) + (distance / dt) * SPEED_SMOOTHING
+      }
+      lastMoveRef.current = { x: point.x, y: point.y, t: event.timeStamp }
+
+      // The drop indicator always snaps: it is what tells you where this lands.
+      const cell = pixelToGrid(
+        gesture.kind === "drag" ? point.x - gesture.grabPxX : point.x,
+        gesture.kind === "drag" ? point.y - gesture.grabPxY : point.y,
+        frame
+      )
+
+      if (gesture.kind === "drag") {
+        const held = previewRef.current
+        const span = held?.w ?? 1
+        const targetCell = {
+          x: clamp(cell.x, 0, Math.max(0, cols - span)),
+          y: Math.max(0, cell.y),
+        }
+        // Remembered so the settle timer can snap without a pointer event.
+        snappedPxRef.current = gridToPixel(targetCell.x, targetCell.y, frame)
+
+        if (speedRef.current > FREE_MOVE_SPEED) {
+          // Moving fast: track the pointer exactly.
+          setFloat({ x: point.x - gesture.grabPxX, y: point.y - gesture.grabPxY, snapping: false })
+        } else {
+          // Slow enough to be placing it: sit in the slot the indicator shows.
+          setFloat({ ...snappedPxRef.current, snapping: true })
+        }
+
+        // Hold still and it settles, even though no more pointermove events come.
+        if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
+        settleTimerRef.current = setTimeout(() => {
+          speedRef.current = 0
+          setFloat({ ...snappedPxRef.current, snapping: true })
+        }, SETTLE_DELAY_MS)
+      }
 
       setPreview((current) => {
         if (!current) return current
@@ -285,8 +392,8 @@ export function useDashboard({
         if (gesture.kind === "drag") {
           return {
             ...current,
-            x: clamp(cell.x - gesture.grabX, 0, Math.max(0, cols - current.w)),
-            y: Math.max(0, cell.y - gesture.grabY),
+            x: clamp(cell.x, 0, Math.max(0, cols - current.w)),
+            y: Math.max(0, cell.y),
           }
         }
 
@@ -333,8 +440,14 @@ export function useDashboard({
         )
       }
 
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
+      settleTimerRef.current = null
+      lastMoveRef.current = null
+      speedRef.current = 0
+
       setGesture(null)
       setPreview(null)
+      setFloat(null)
     }
 
     window.addEventListener("pointermove", handleMove)
@@ -344,6 +457,7 @@ export function useDashboard({
       window.removeEventListener("pointermove", handleMove)
       window.removeEventListener("pointerup", finish)
       window.removeEventListener("pointercancel", finish)
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
     }
   }, [gesture, grid, pointerToCanvas, setItems])
 
@@ -427,6 +541,10 @@ export function useDashboard({
     [grid.maxSpan, grid.minSpan, setItems]
   )
 
+  const toggleAddWidgetMode = React.useCallback(() => {
+    setAddWidgetMode((current) => !current)
+  }, [])
+
   const save = React.useCallback(
     (): SerializedLayout => serializeLayout(itemsRef.current as DashboardItem[]),
     []
@@ -462,14 +580,19 @@ export function useDashboard({
     metrics,
     grid,
     preview,
+    /** Where the dragged card paints; null unless a drag is in flight. */
+    float,
     /** False until the canvas has been measured once. */
     isMeasured: metrics.width > 0,
     activeId: gesture?.id ?? null,
     isFixedHeight: fixedHeight !== null,
+    isAddWidgetMode: isEditing && isAddWidgetMode,
     canvasRef,
     widgets,
     // actions
     setEditing,
+    toggleAddWidgetMode,
+    setAddWidgetMode,
     addWidget,
     removeWidget,
     tidy,

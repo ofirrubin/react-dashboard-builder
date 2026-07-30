@@ -13,10 +13,10 @@ import type { SerializedItem } from "rud-dashboard"
 import { Button } from "@/components/ui/button"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import type { WidgetCatalog } from "@/components/dashboard/dashboard"
-import { ChartWidget } from "@/components/dashboard/widgets/chart-widget"
-import { NotesWidget } from "@/components/dashboard/widgets/notes-widget"
-import { ProgressWidget } from "@/components/dashboard/widgets/progress-widget"
-import { StatWidget } from "@/components/dashboard/widgets/stat-widget"
+import { ChartWidget, ChartWidgetPreview } from "@/components/dashboard/widgets/chart-widget"
+import { NotesWidget, NotesWidgetPreview } from "@/components/dashboard/widgets/notes-widget"
+import { ProgressWidget, ProgressWidgetPreview } from "@/components/dashboard/widgets/progress-widget"
+import { StatWidget, StatWidgetPreview } from "@/components/dashboard/widgets/stat-widget"
 
 const REVENUE = [
   { label: "Mar", value: 186 },
@@ -48,6 +48,7 @@ const widgets: WidgetCatalog = {
     description: "Monthly recurring revenue",
     icon: DollarSignIcon,
     defaultSize: { w: 3, h: 2 },
+    preview: () => <StatWidgetPreview />,
     render: () => (
       <StatWidget
         label="Revenue"
@@ -63,6 +64,7 @@ const widgets: WidgetCatalog = {
     description: "Signed in over the last 24h",
     icon: ActivityIcon,
     defaultSize: { w: 3, h: 2 },
+    preview: () => <StatWidgetPreview />,
     render: () => (
       <StatWidget label="Active users" value="2,338" delta="-4.3%" trend="down" hint="vs. yesterday" />
     ),
@@ -72,6 +74,7 @@ const widgets: WidgetCatalog = {
     description: "Bar chart, last 6 months",
     icon: BarChart3Icon,
     defaultSize: { w: 6, h: 4 },
+    preview: () => <ChartWidgetPreview />,
     render: () => <ChartWidget data={REVENUE} seriesName="Revenue" variant="bar" />,
   },
   traffic: {
@@ -79,6 +82,7 @@ const widgets: WidgetCatalog = {
     description: "Area chart, last 7 days",
     icon: ActivityIcon,
     defaultSize: { w: 6, h: 4 },
+    preview: () => <ChartWidgetPreview />,
     render: () => (
       <ChartWidget data={TRAFFIC} seriesName="Visits" variant="area" color="var(--chart-2)" />
     ),
@@ -88,6 +92,7 @@ const widgets: WidgetCatalog = {
     description: "Usage against plan limits",
     icon: GaugeIcon,
     defaultSize: { w: 3, h: 4 },
+    preview: () => <ProgressWidgetPreview />,
     render: () => (
       <ProgressWidget
         rows={[
@@ -103,6 +108,7 @@ const widgets: WidgetCatalog = {
     description: "Prose, styled by Typeset",
     icon: StickyNoteIcon,
     defaultSize: { w: 3, h: 4 },
+    preview: () => <NotesWidgetPreview />,
     render: () => (
       <NotesWidget>
         <h3>What&rsquo;s new</h3>
