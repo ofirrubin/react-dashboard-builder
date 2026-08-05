@@ -46,6 +46,11 @@
           "target": "@components/dashboard/dashboard-toolbar.tsx"
         },
         {
+          "path": "registry/rud/dashboard/dashboard-widget-bar.tsx",
+          "type": "registry:component",
+          "target": "@components/dashboard/dashboard-widget-bar.tsx"
+        },
+        {
           "path": "registry/rud/dashboard/use-dashboard.ts",
           "type": "registry:hook",
           "target": "@components/dashboard/use-dashboard.ts"
