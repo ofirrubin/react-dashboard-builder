@@ -41,16 +41,30 @@ const buttonVariants = cva(
   }
 )
 
-function Button({
+/**
+ * Preact-only change: wrapped in `forwardRef`.
+ *
+ * React 19 passes `ref` as an ordinary prop, so upstream's plain function
+ * component carries it to the DOM node through `{...props}`. `preact/compat`
+ * still extracts `ref` specially, so it never appears in props and the node
+ * below never receives it.
+ *
+ * That silently breaks every `asChild` trigger: Radix's `Slot` hands the trigger
+ * ref to this component, it goes nowhere, and Popper has no anchor to measure —
+ * popovers and tooltips then render at 0,0 minus their own height, i.e. off
+ * screen above the viewport. Forwarding the ref restores anchoring.
+ */
+const Button = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<"button"> &
+    VariantProps<typeof buttonVariants> & { asChild?: boolean }
+>(function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
+}, ref) {
   // Preact-only tweak: `Slot.Root` is typed for HTMLElement while "button" is
   // typed for HTMLButtonElement, and preact/compat treats `Ref<T>` as invariant
   // where @types/react does not. Widening the union to a single element type
@@ -59,6 +73,7 @@ function Button({
 
   return (
     <Comp
+      ref={ref}
       data-slot="button"
       data-variant={variant}
       data-size={size}
@@ -66,6 +81,7 @@ function Button({
       {...props}
     />
   )
-}
+})
+Button.displayName = "Button"
 
 export { Button, buttonVariants }

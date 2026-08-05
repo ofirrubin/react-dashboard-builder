@@ -15,7 +15,7 @@ npx shadcn@latest registry add @rud=https://raw.githubusercontent.com/ofirrubin/
 npx shadcn@latest add @rud/dashboard-demo
 ```
 
-That installs 22 files: the grid, four widget bodies, the optional theme, and a
+That installs 23 files: the grid, four widget bodies, the optional theme, and a
 complete demo page. Then render it:
 
 ```tsx
@@ -211,14 +211,40 @@ export default defineConfig({ plugins: [preact(), tailwindcss()] })
 }
 ```
 
-Two small notes, both already handled in `examples/preact-vite`:
+### Three shadcn tweaks Preact needs
 
-- shadcn's `ui/button.tsx` needs `as React.ElementType` on the `Slot.Root` /
-  `"button"` union, because `preact/compat` treats refs as invariant.
-- shadcn's `ui/chart.tsx` needs `color?: string` declared explicitly on
-  `ChartTooltipContent`.
+All three are in `ui/` files you own, and all three are already applied in
+`examples/preact-vite`. **The dashboard components themselves need nothing** —
+their sources are byte-identical to the React example's.
 
-Both are one-line edits in files you own. The dashboard components need nothing.
+**1. `ui/button.tsx` must forward its ref.** This one is not cosmetic: without
+it, every `asChild` trigger in your app is quietly broken.
+
+```tsx
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  function Button({ className, variant, size, asChild = false, ...props }, ref) {
+    const Comp = (asChild ? Slot.Root : "button") as React.ElementType
+    return <Comp ref={ref} data-slot="button" {...props} />
+  }
+)
+```
+
+React 19 passes `ref` as an ordinary prop, so upstream's plain function component
+carries it to the DOM node through `{...props}`. `preact/compat` still extracts
+`ref` specially, so it never appears in props and never reaches the node. Radix's
+`Slot` then hands the trigger ref to a component that drops it, Popper has no
+anchor to measure, and **popovers and tooltips render at 0,0 minus their own
+height — off screen above the viewport.** They are in the DOM and look "open" to
+a test; they are simply not where you can see them. Forwarding the ref restores
+anchoring, and popover/tooltip positions then match React exactly.
+
+**2. `ui/button.tsx` needs `as React.ElementType`** on the `Slot.Root` / `"button"`
+union (shown above), because `preact/compat` treats `Ref<T>` as invariant where
+`@types/react` does not.
+
+**3. `ui/chart.tsx` needs `color?: string`** declared explicitly on
+`ChartTooltipContent`. recharts surfaces it through its Tooltip props, but that
+does not survive the `preact/compat` intersection.
 
 ## Development
 
