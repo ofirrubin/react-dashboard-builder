@@ -136,12 +136,12 @@ export interface ResolveOptions {
  * Remove all overlaps by letting items fall downward, top-to-bottom then
  * left-to-right. Deterministic: same input always yields the same output.
  */
-export function resolveCollisions(
-  items: readonly GridRect[],
+export function resolveCollisions<T extends GridRect>(
+  items: readonly T[],
   { cols, minSpan = 1, pinnedId, reAnchor = false }: ResolveOptions
-): GridRect[] {
+): T[] {
   const ordered = [...items].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
-  const placed: GridRect[] = [];
+  const placed: T[] = [];
 
   const pinned = pinnedId ? ordered.find((i) => i.id === pinnedId) : undefined;
   if (pinned) placed.push(pinned);
@@ -164,8 +164,7 @@ export function resolveCollisions(
 
     while (!isFree(matrix, x, y, w, h, cols)) y++;
 
-    const next: GridRect = { ...item, x, y, w, h };
-    placed.push(next);
+    placed.push({ ...item, x, y, w, h });
     matrix = createOccupancyMatrix(placed, cols);
   }
 
@@ -177,10 +176,10 @@ export function resolveCollisions(
  * `cols`. Ties break by previous visual position so the result feels like a
  * tidy-up rather than a shuffle.
  */
-export function packItems(
-  items: readonly GridRect[],
+export function packItems<T extends GridRect>(
+  items: readonly T[],
   { cols, minSpan = 1 }: { cols: number; minSpan?: number }
-): GridRect[] {
+): T[] {
   const byArea = [...items].sort((a, b) => {
     const areaA = (a.anchorW ?? a.w) * (a.anchorH ?? a.h);
     const areaB = (b.anchorW ?? b.w) * (b.anchorH ?? b.h);
@@ -194,7 +193,7 @@ export function packItems(
     return a.id.localeCompare(b.id);
   });
 
-  const packed: GridRect[] = [];
+  const packed: T[] = [];
   for (const item of byArea) {
     const w = clamp(Math.max(minSpan, item.anchorW ?? item.w), minSpan, cols);
     const h = Math.max(minSpan, item.anchorH ?? item.h);
@@ -220,10 +219,10 @@ export function packItems(
  * Re-fit items after the column count changes. Widening restores anchors where
  * possible; narrowing clamps spans and lets items reflow downward.
  */
-export function reflow(
-  items: readonly GridRect[],
+export function reflow<T extends GridRect>(
+  items: readonly T[],
   { fromCols, toCols, minSpan = 1 }: { fromCols: number; toCols: number; minSpan?: number }
-): GridRect[] {
+): T[] {
   const widening = toCols > fromCols;
 
   const resized = items.map((item) => {

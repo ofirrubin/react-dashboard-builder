@@ -45,6 +45,11 @@ const GRID_STYLES: { value: GridStyle; label: string }[] = [
   { value: "none", label: "None" },
 ]
 
+/** ToggleGroup hands back a plain string; narrow it instead of asserting. */
+function isGridStyle(value: string): value is GridStyle {
+  return GRID_STYLES.some((style) => style.value === value)
+}
+
 export interface DashboardToolbarProps {
   itemCount: number
   isEditing: boolean
@@ -186,7 +191,7 @@ export function DashboardToolbar({
                   value={gridStyle}
                   onValueChange={(value) => {
                     // Radix clears the value when the active item is re-pressed.
-                    if (value) onGridStyleChange(value as GridStyle)
+                    if (isGridStyle(value)) onGridStyleChange(value)
                   }}
                   className="w-full"
                 >

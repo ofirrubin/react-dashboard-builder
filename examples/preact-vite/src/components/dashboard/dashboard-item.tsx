@@ -16,23 +16,9 @@ import {
 } from "@/components/ui/card"
 
 /**
- * Resize affordances. Corners show a dot on hover; edges are invisible hit strips.
- *
- * The dots sit 8–16px inside each corner, which is further in than the card's
- * 12px padding — so rather than move them, the card makes room: on hover the
- * header and content ease their padding outward (see `INSET_ON_HOVER` below) and
- * the dots land in the gap that opens up. The mark stays in one place and never
- * covers a chart or a line of text.
- *
- * 24px hit area rather than the usual 40px minimum: a one-column widget is only
- * ~64px wide, so 40px corners would overlap each other, and overlapping hit
- * areas are worse than small ones. Keyboard resize (shift + arrows) is the
- * accessible path.
- */
-/**
- * The inset that opens up in edit mode, freeing the corners for the resize dots.
- * Applied to the header and the content so the whole inside draws in together —
- * it reads as the card growing a frame, not as text jumping.
+ * The inset that opens up in edit mode, freeing the card's corners for the resize
+ * dots. Applied to the header and the content so the whole inside draws in
+ * together — it reads as the card growing a frame, not as text jumping.
  *
  * Only `padding` transitions. That does reflow the content box, so two guards
  * apply below: it is skipped on cards too small to spare the room, and the
@@ -52,6 +38,18 @@ const INSET_TRANSITION =
 const MIN_WIDTH_FOR_INSET = 170
 const MIN_HEIGHT_FOR_INSET = 130
 
+/**
+ * Resize affordances. Corners show a dot on hover; edges are invisible hit strips.
+ *
+ * The dots sit 8-16px inside each corner, further in than the card's 12px
+ * padding — which is why the inset above exists rather than moving them. The
+ * mark stays in one place and never covers a chart or a line of text.
+ *
+ * 24px hit area rather than the usual 40px minimum: a one-column widget is only
+ * ~64px wide, so 40px corners would overlap each other, and overlapping hit
+ * areas are worse than small ones. Keyboard resize (shift + arrows) is the
+ * accessible path.
+ */
 const HANDLES: { handle: ResizeHandle; className: string; corner: boolean }[] = [
   { handle: "nw", className: "top-0 left-0 size-6 cursor-nwse-resize", corner: true },
   { handle: "ne", className: "top-0 right-0 size-6 cursor-nesw-resize", corner: true },
@@ -108,10 +106,11 @@ function DashboardItemComponent({
   const insetClasses = canInset && [INSET, !isActive && INSET_TRANSITION]
 
   // While held, the card paints where the pointer is rather than in its slot.
-  const isHeld = Boolean(float)
-  const position = float ?? slot
+  // Both flags come off the same narrowing, so no non-null assertion is needed.
+  const isHeld = float != null
+  const position = isHeld ? float : slot
   // Tracking the pointer must be instantaneous; settling into a slot should ease.
-  const freeMoving = isHeld && !float!.snapping
+  const freeMoving = isHeld && !float.snapping
 
   /**
    * Arrow keys move; Shift+arrows resize. Without this the grid is entirely

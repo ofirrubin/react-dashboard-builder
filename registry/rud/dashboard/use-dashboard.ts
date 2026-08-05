@@ -19,7 +19,6 @@ import {
   serializeLayout,
 } from "rud-dashboard"
 import type {
-  DashboardItem,
   GridConfig,
   GridMetrics,
   GridRect,
@@ -281,7 +280,7 @@ export function useDashboard({
           toCols: nextCols,
           minSpan: grid.minSpan,
         })
-        setItems(reflowed as SerializedItem[])
+        setItems(reflowed)
         setMetrics(measureGrid(width, reflowed, grid, { maxHeight: heightCap, maxHeightMode }))
       } else {
         setMetrics(measureGrid(width, itemsRef.current, grid, { maxHeight: heightCap, maxHeightMode }))
@@ -462,7 +461,7 @@ export function useDashboard({
             cols: metricsRef.current.cols,
             minSpan: grid.minSpan,
             pinnedId: activeId,
-          }) as SerializedItem[]
+          })
         )
       }
 
@@ -533,7 +532,7 @@ export function useDashboard({
       packItems(itemsRef.current, {
         cols: metricsRef.current.cols,
         minSpan: grid.minSpan,
-      }) as SerializedItem[]
+      })
     )
   }, [grid.minSpan, setItems])
 
@@ -564,7 +563,7 @@ export function useDashboard({
           cols,
           minSpan: grid.minSpan,
           pinnedId: id,
-        }) as SerializedItem[]
+        })
       )
     },
     [grid.maxSpan, grid.minSpan, setItems]
@@ -575,7 +574,7 @@ export function useDashboard({
   }, [])
 
   const save = React.useCallback(
-    (): SerializedLayout => serializeLayout(itemsRef.current as DashboardItem[]),
+    (): SerializedLayout => serializeLayout(itemsRef.current),
     []
   )
 
@@ -592,7 +591,7 @@ export function useDashboard({
         resolveCollisions(parsed.items, {
           cols: metricsRef.current.cols,
           minSpan: grid.minSpan,
-        }) as SerializedItem[]
+        })
       )
     },
     [grid.minSpan, setItems]
