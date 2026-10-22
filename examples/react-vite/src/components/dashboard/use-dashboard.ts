@@ -5,6 +5,7 @@ import {
   DEFAULT_GRID,
   applyResize,
   clamp,
+  commitPlacement,
   findFreeSlot,
   gridToPixel,
   measureGrid,
@@ -17,6 +18,7 @@ import {
   resolveFrame,
   resolveCollisions,
   serializeLayout,
+  spanToPixels,
 } from "rud-dashboard"
 import type {
   GridConfig,
@@ -46,6 +48,16 @@ export interface WidgetDefinition {
   /** Span used when added from the palette. Defaults to 4x3. */
   defaultSize?: { w: number; h: number }
   /**
+   * Rows to use when the grid stacks to a single column, on phones.
+   *
+   * Every widget is full width there, so its desktop height is often wrong: a
+   * chart that was 8 wide by 3 tall reads fine, but a 3x1 stat is suddenly a
+   * thin strip and a 4x6 list is a long scroll. This changes only the stacked
+   * view — widening back restores the desktop height, and the saved layout keeps
+   * it.
+   */
+  stackedHeight?: number
+  /**
    * A miniature of the widget, shown in the add-widget bar.
    *
    * Far more useful than a name and an icon — you can see what you are about to
@@ -60,10 +72,29 @@ export interface WidgetRenderContext {
   id: string
   type: string
   title: string
-  /** Current span in grid cells — useful for switching density. */
+  /**
+   * Current span in grid cells. Prefer `pixelSize` or `compact` for layout
+   * decisions: a cell is a different width at every breakpoint, and on a phone
+   * `w: 1` is the whole screen.
+   */
   size: { w: number; h: number }
+  /** Outer size of the card, in px. */
+  pixelSize: { width: number; height: number }
+  /** Columns the grid currently has. */
+  columns: number
+  /** The grid is a single column: the phone layout, where every widget is full width. */
+  stacked: boolean
+  /**
+   * The card is narrower than `COMPACT_WIDTH` — show less: drop secondary text,
+   * hide axes, shorten numbers. For anything finer-grained, the widget body is a
+   * CSS size container, so `@xs:`/`@sm:` variants respond to the card itself.
+   */
+  compact: boolean
   isEditing: boolean
 }
+
+/** Card width, in px, below which `WidgetRenderContext.compact` is true. */
+export const COMPACT_WIDTH = 280
 
 /** Every widget kind the dashboard can render, keyed by `type`. */
 export type WidgetCatalog = Record<string, WidgetDefinition>
@@ -106,6 +137,25 @@ const SETTLE_DELAY_MS = 90
 
 /** Smoothing on the speed estimate. Raw per-event deltas are far too jittery. */
 const SPEED_SMOOTHING = 0.4
+
+/**
+ * Edge auto-scroll while a gesture is running. On a phone the stacked grid is
+ * far taller than the screen, so without it a card can only be moved as far as
+ * the viewport you happened to start in.
+ */
+const AUTOSCROLL_EDGE_PX = 56
+const AUTOSCROLL_MAX_SPEED_PX = 18
+
+/** The nearest ancestor that actually scrolls vertically, else the document. */
+function scrollParent(element: HTMLElement | null): HTMLElement {
+  for (let node = element?.parentElement; node; node = node.parentElement) {
+    const { overflowY } = getComputedStyle(node)
+    if ((overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight) {
+      return node
+    }
+  }
+  return (document.scrollingElement as HTMLElement | null) ?? document.documentElement
+}
 
 /** An in-flight pointer gesture. */
 type Gesture =
@@ -249,6 +299,10 @@ export function useDashboard({
   // without re-subscribing on every change.
   const itemsRef = React.useRef(items)
   itemsRef.current = items
+  const widgetsRef = React.useRef(widgets)
+  widgetsRef.current = widgets
+  /** False until the first real measure, which always fits the layout to the grid. */
+  const fittedRef = React.useRef(false)
   const metricsRef = React.useRef(metrics)
   metricsRef.current = metrics
   const previewRef = React.useRef(preview)
@@ -270,15 +324,22 @@ export function useDashboard({
       const width = element.clientWidth
       if (width === 0) return
 
-      const previousCols = metricsRef.current.cols
       const nextCols = resolveColumns(width, grid.columns)
+      // The pre-measure placeholder is one column — the same as a phone. So on a
+      // phone the first measure sees "no change" and would leave a desktop
+      // layout hanging off the right edge. Fit it against itself instead.
+      const previousCols = fittedRef.current ? metricsRef.current.cols : nextCols
+      const firstFit = !fittedRef.current
+      fittedRef.current = true
 
       // Reflow before measuring rows, so the height accounts for the new layout.
-      if (nextCols !== previousCols && itemsRef.current.length > 0) {
+      if ((firstFit || nextCols !== previousCols) && itemsRef.current.length > 0) {
         const reflowed = reflow(itemsRef.current, {
           fromCols: previousCols,
           toCols: nextCols,
           minSpan: grid.minSpan,
+          heightAt: (item, cols) =>
+            cols === 1 ? widgetsRef.current[item.type]?.stackedHeight : undefined,
         })
         setItems(reflowed)
         setMetrics(measureGrid(width, reflowed, grid, { maxHeight: heightCap, maxHeightMode }))
@@ -302,7 +363,7 @@ export function useDashboard({
   /* ------------------------------- gestures ------------------------------- */
 
   /** Pointer position relative to the canvas box, in px. */
-  const pointerToCanvas = React.useCallback((event: PointerEvent | React.PointerEvent<HTMLElement>) => {
+  const pointerToCanvas = React.useCallback((event: { clientX: number; clientY: number }) => {
     const rect = canvasRef.current?.getBoundingClientRect()
     if (!rect) return null
     return { x: event.clientX - rect.left, y: event.clientY - rect.top }
@@ -358,7 +419,14 @@ export function useDashboard({
   React.useEffect(() => {
     if (!gesture) return
 
-    const handleMove = (event: PointerEvent) => {
+    /** Last pointer position in client coordinates, for auto-scroll ticks. */
+    let lastClient: { x: number; y: number } | null = null
+    let scrollFrame = 0
+    const scroller = scrollParent(canvasRef.current)
+
+    const handleMove = (event: Pick<PointerEvent, "clientX" | "clientY" | "timeStamp">) => {
+      lastClient = { x: event.clientX, y: event.clientY }
+      if (!scrollFrame) scrollFrame = requestAnimationFrame(autoScroll)
       const point = pointerToCanvas(event)
       if (!point) return
       const { cols, rows, frame } = metricsRef.current
@@ -435,26 +503,43 @@ export function useDashboard({
       })
     }
 
+    /**
+     * Scroll while the pointer sits near the top or bottom edge, faster the
+     * closer it gets, and replay the last move so the card and indicator follow
+     * the content that scrolled under them.
+     */
+    function autoScroll() {
+      scrollFrame = 0
+      if (!lastClient) return
+      const isDocument = scroller === document.scrollingElement || scroller === document.documentElement
+      const top = isDocument ? 0 : scroller.getBoundingClientRect().top
+      const bottom = isDocument ? window.innerHeight : scroller.getBoundingClientRect().bottom
+      const intoTop = AUTOSCROLL_EDGE_PX - (lastClient.y - top)
+      const intoBottom = AUTOSCROLL_EDGE_PX - (bottom - lastClient.y)
+      const pull = intoTop > 0 ? -intoTop : intoBottom > 0 ? intoBottom : 0
+      if (pull === 0) return
+
+      const step = Math.round((pull / AUTOSCROLL_EDGE_PX) * AUTOSCROLL_MAX_SPEED_PX)
+      const before = scroller.scrollTop
+      scroller.scrollTop += step
+      if (scroller.scrollTop === before) return // hit the end
+
+      handleMove({ clientX: lastClient.x, clientY: lastClient.y, timeStamp: performance.now() })
+    }
+
     const finish = () => {
       const committed = previewRef.current
       const activeId = gesture.id
+      lastClient = null
+      if (scrollFrame) cancelAnimationFrame(scrollFrame)
+      scrollFrame = 0
 
       if (committed) {
+        // The user chose this spot, so it becomes the anchor to return to —
+        // unless the grid is too narrow to show the item at its real width.
+        const cols = metricsRef.current.cols
         const updated = itemsRef.current.map((item) =>
-          item.id === activeId
-            ? {
-                ...item,
-                x: committed.x,
-                y: committed.y,
-                w: committed.w,
-                h: committed.h,
-                // The user chose this spot: make it the anchor to return to.
-                anchorX: committed.x,
-                anchorY: committed.y,
-                anchorW: committed.w,
-                anchorH: committed.h,
-              }
-            : item
+          item.id === activeId ? commitPlacement(item, committed, cols) : item
         )
         setItems(
           resolveCollisions(updated, {
@@ -483,6 +568,7 @@ export function useDashboard({
       window.removeEventListener("pointerup", finish)
       window.removeEventListener("pointercancel", finish)
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
+      if (scrollFrame) cancelAnimationFrame(scrollFrame)
     }
   }, [gesture, grid, pointerToCanvas, setItems])
 
@@ -496,13 +582,16 @@ export function useDashboard({
       const size = definition.defaultSize ?? { w: 4, h: 3 }
       const cols = metricsRef.current.cols
       const id = nextItemId(itemsRef.current)
+      const h = cols === 1 ? (definition.stackedHeight ?? size.h) : size.h
 
       const slot = findFreeSlot(
-        { id, x: 0, y: 0, w: size.w, h: size.h },
+        { id, x: 0, y: 0, w: size.w, h },
         itemsRef.current,
         { cols, minSpan: grid.minSpan, ignoreAnchor: true, strategy: "compact" }
       )
 
+      // Anchor at the intended size, not the slot: added on a phone, the slot is
+      // one column wide, and that would be the widget's width on desktop forever.
       setItems([
         ...itemsRef.current,
         {
@@ -512,8 +601,8 @@ export function useDashboard({
           ...slot,
           anchorX: slot.x,
           anchorY: slot.y,
-          anchorW: slot.w,
-          anchorH: slot.h,
+          anchorW: Math.max(slot.w, size.w),
+          anchorH: size.h,
         },
       ])
     },
@@ -554,9 +643,7 @@ export function useDashboard({
       const y = clamp(current.y + (delta.y ?? 0), 0, maxY)
 
       const moved = itemsRef.current.map((item) =>
-        item.id === id
-          ? { ...item, x, y, w, h, anchorX: x, anchorY: y, anchorW: w, anchorH: h }
-          : item
+        item.id === id ? commitPlacement(item, { x, y, w, h }, cols) : item
       )
       setItems(
         resolveCollisions(moved, {
@@ -572,6 +659,25 @@ export function useDashboard({
   const toggleAddWidgetMode = React.useCallback(() => {
     setAddWidgetMode((current) => !current)
   }, [])
+
+  /** Everything a widget's `render` receives for one item. */
+  const renderContext = React.useCallback(
+    (item: SerializedItem): WidgetRenderContext => {
+      const pixelSize = spanToPixels(item.w, item.h, metrics.frame)
+      return {
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        size: { w: item.w, h: item.h },
+        pixelSize,
+        columns: metrics.cols,
+        stacked: metrics.cols === 1,
+        compact: pixelSize.width < COMPACT_WIDTH,
+        isEditing,
+      }
+    },
+    [isEditing, metrics.cols, metrics.frame]
+  )
 
   const save = React.useCallback(
     (): SerializedLayout => serializeLayout(itemsRef.current),
@@ -616,6 +722,8 @@ export function useDashboard({
     isFixedHeight: heightCapped,
     /** True when the canvas is capped and must scroll to show everything. */
     scrolls: metrics.scrolls,
+    /** The grid is a single column — the phone layout. */
+    isStacked: metrics.cols === 1,
     isAddWidgetMode: isEditing && isAddWidgetMode,
     canvasRef,
     widgets,
@@ -631,6 +739,7 @@ export function useDashboard({
     save,
     load,
     toggleFixedHeight,
+    renderContext,
     beginDrag,
     beginResize,
   }

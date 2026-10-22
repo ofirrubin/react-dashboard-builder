@@ -215,19 +215,54 @@ export function packItems<T extends GridRect>(
   return packed;
 }
 
+export interface ReflowOptions<T extends GridRect> {
+  fromCols: number;
+  toCols: number;
+  minSpan?: number;
+  /**
+   * Height to use at a given column count, overriding the item's own. Return
+   * `undefined` to keep it. This is how a widget can be taller when the grid
+   * stacks to a single column on a phone, without touching its desktop height.
+   */
+  heightAt?: (item: T, cols: number) => number | undefined;
+}
+
+/**
+ * Fill in any missing anchor from the item's current rectangle.
+ *
+ * An item with no anchors has nothing to return to, so narrowing it used to be
+ * a one-way trip: every span clamped to the phone's single column, and once that
+ * state was saved, widening had no record of the desktop layout to restore.
+ */
+function withAnchors<T extends GridRect>(item: T): T {
+  return {
+    ...item,
+    anchorX: item.anchorX ?? item.x,
+    anchorY: item.anchorY ?? item.y,
+    anchorW: item.anchorW ?? item.w,
+    anchorH: item.anchorH ?? item.h,
+  };
+}
+
 /**
  * Re-fit items after the column count changes. Widening restores anchors where
  * possible; narrowing clamps spans and lets items reflow downward.
+ *
+ * Pass the same count for `fromCols` and `toCols` to fit a layout to the grid
+ * it is being shown on — on a first load, say, where the saved layout was made
+ * on a wider screen. Anything that is not widening records anchors first, so a
+ * round trip through a phone always comes back to the original arrangement.
  */
 export function reflow<T extends GridRect>(
   items: readonly T[],
-  { fromCols, toCols, minSpan = 1 }: { fromCols: number; toCols: number; minSpan?: number }
+  { fromCols, toCols, minSpan = 1, heightAt }: ReflowOptions<T>
 ): T[] {
   const widening = toCols > fromCols;
 
-  const resized = items.map((item) => {
+  const resized = items.map((original) => {
+    const item = widening ? original : withAnchors(original);
     const targetW = item.anchorW ?? item.w;
-    const targetH = item.anchorH ?? item.h;
+    const targetH = heightAt?.(original, toCols) ?? item.anchorH ?? item.h;
     return {
       ...item,
       w: clamp(Math.max(minSpan, targetW), minSpan, toCols),
@@ -236,6 +271,26 @@ export function reflow<T extends GridRect>(
   });
 
   return resolveCollisions(resized, { cols: toCols, minSpan, reAnchor: widening });
+}
+
+/**
+ * Apply a placement the user chose — the end of a drag, a resize, a keyboard
+ * nudge — and decide whether it becomes the anchor to return to.
+ *
+ * On a grid wide enough to show the item at its intended width, it does. On a
+ * narrower one (a phone, where everything is one column wide) the user is only
+ * rearranging a reduced view: recording it would overwrite the desktop layout
+ * with one-column spans, so the anchors are left alone.
+ */
+export function commitPlacement<T extends GridRect>(
+  item: T,
+  rect: Pick<GridRect, 'x' | 'y' | 'w' | 'h'>,
+  cols: number
+): T {
+  const narrowed = (item.anchorW ?? item.w) > cols;
+  const placed = { ...item, x: rect.x, y: rect.y, w: rect.w, h: rect.h };
+  if (narrowed) return placed;
+  return { ...placed, anchorX: rect.x, anchorY: rect.y, anchorW: rect.w, anchorH: rect.h };
 }
 
 /** Apply a resize gesture to a rectangle, in grid units. */

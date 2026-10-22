@@ -86,11 +86,15 @@ export function DashboardToolbar({
       data-slot="dashboard-toolbar"
       className={cn("flex flex-wrap items-center gap-2", className)}
     >
-      <Badge variant="secondary" className="tabular-nums">
+      {/* The count is a nicety; on a phone the row is better spent on actions. */}
+      <Badge variant="secondary" className="tabular-nums max-sm:hidden">
         {itemCount} {itemCount === 1 ? "widget" : "widgets"}
       </Badge>
 
-      <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-6" />
+      <Separator
+        orientation="vertical"
+        className="mx-1 data-[orientation=vertical]:h-6 max-sm:hidden"
+      />
 
       {editable && (
         <Tooltip>
@@ -162,7 +166,8 @@ export function DashboardToolbar({
             <TooltipTrigger asChild>
               <Button variant="outline" size="sm" onClick={onTidy} disabled={itemCount === 0}>
                 <SparklesIcon data-icon="inline-start" />
-                Tidy up
+                {/* Icon-only on phones, so the toolbar stays one row at 360px. */}
+                <span className="max-sm:sr-only">Tidy up</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>Repack widgets to remove gaps</TooltipContent>

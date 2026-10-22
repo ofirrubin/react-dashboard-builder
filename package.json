@@ -1,7 +1,7 @@
 {
   "name": "rud-dashboard-workspace",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Monorepo for rud-dashboard: a headless layout engine on npm, and a shadcn registry that ships the UI as editable source.",
   "author": "Ofir Rubin",
   "license": "MIT",
@@ -14,11 +14,12 @@
     "build": "npm run build --workspace=rud-dashboard && npm run registry:build",
     "registry:build": "node scripts/check-registry-complete.mjs && shadcn build",
     "registry:serve": "npm run registry:build && npx --yes http-server public -p 4499 --cors -s",
-    "test": "npm run test --workspace=rud-dashboard",
+    "test": "npm run examples:check && npm run test --workspace=rud-dashboard && npm run test --workspace=examples-react-vite",
     "typecheck": "npm run typecheck --workspace=rud-dashboard",
     "example:react": "npm run dev --workspace=examples-react-vite",
     "example:preact": "npm run dev --workspace=examples-preact-vite",
-    "registry:check": "node scripts/check-registry-complete.mjs"
+    "registry:check": "node scripts/check-registry-complete.mjs",
+    "examples:check": "node scripts/check-examples-in-sync.mjs"
   },
   "devDependencies": {
     "shadcn": "^4.16.0"

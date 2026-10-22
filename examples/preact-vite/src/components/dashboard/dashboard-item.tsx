@@ -25,8 +25,9 @@ import {
  * transition is dropped while a gesture is running so it never animates a reflow
  * on top of a resize.
  */
-const INSET = "group-hover/item:px-5 group-focus-visible/item:px-5"
-const INSET_Y = "group-hover/item:py-5 group-focus-visible/item:py-5"
+// Touch screens have no hover to reveal the frame, so it stays open there.
+const INSET = "group-hover/item:px-5 group-focus-visible/item:px-5 pointer-coarse:px-5"
+const INSET_Y = "group-hover/item:py-5 group-focus-visible/item:py-5 pointer-coarse:py-5"
 const INSET_TRANSITION =
   "motion-safe:transition-[padding] motion-safe:duration-200 " +
   "motion-safe:ease-[cubic-bezier(0.2,0,0,1)]"
@@ -40,6 +41,8 @@ const MIN_HEIGHT_FOR_INSET = 130
 
 /**
  * Resize affordances. Corners show a dot on hover; edges are invisible hit strips.
+ * On touch screens (`pointer-coarse`) there is no hover, so the dots stay visible
+ * and the hit areas grow to a fingertip.
  *
  * The dots sit 8-16px inside each corner, further in than the card's 12px
  * padding — which is why the inset above exists rather than moving them. The
@@ -50,21 +53,31 @@ const MIN_HEIGHT_FOR_INSET = 130
  * areas are worse than small ones. Keyboard resize (shift + arrows) is the
  * accessible path.
  */
+const CORNER = "size-6 pointer-coarse:size-10"
 const HANDLES: { handle: ResizeHandle; className: string; corner: boolean }[] = [
-  { handle: "nw", className: "top-0 left-0 size-6 cursor-nwse-resize", corner: true },
-  { handle: "ne", className: "top-0 right-0 size-6 cursor-nesw-resize", corner: true },
-  { handle: "sw", className: "bottom-0 left-0 size-6 cursor-nesw-resize", corner: true },
-  { handle: "se", className: "bottom-0 right-0 size-6 cursor-nwse-resize", corner: true },
-  { handle: "n", className: "top-0 inset-x-6 h-2 cursor-ns-resize", corner: false },
-  { handle: "s", className: "bottom-0 inset-x-6 h-2 cursor-ns-resize", corner: false },
-  { handle: "w", className: "left-0 inset-y-6 w-2 cursor-ew-resize", corner: false },
-  { handle: "e", className: "right-0 inset-y-6 w-2 cursor-ew-resize", corner: false },
+  { handle: "nw", className: `top-0 left-0 ${CORNER} cursor-nwse-resize`, corner: true },
+  { handle: "ne", className: `top-0 right-0 ${CORNER} cursor-nesw-resize`, corner: true },
+  { handle: "sw", className: `bottom-0 left-0 ${CORNER} cursor-nesw-resize`, corner: true },
+  { handle: "se", className: `bottom-0 right-0 ${CORNER} cursor-nwse-resize`, corner: true },
+  { handle: "n", className: "top-0 inset-x-6 h-2 pointer-coarse:h-4 cursor-ns-resize", corner: false },
+  { handle: "s", className: "bottom-0 inset-x-6 h-2 pointer-coarse:h-4 cursor-ns-resize", corner: false },
+  { handle: "w", className: "left-0 inset-y-6 w-2 pointer-coarse:w-4 cursor-ew-resize", corner: false },
+  { handle: "e", className: "right-0 inset-y-6 w-2 pointer-coarse:w-4 cursor-ew-resize", corner: false },
 ]
+
+/**
+ * In a single-column grid width is fixed and the top edge belongs to whatever is
+ * above, so only the bottom edge and corner can do anything. Showing the rest
+ * would be four dead targets crowding the card's corners.
+ */
+const STACKED_HANDLES = new Set<ResizeHandle>(["s", "se"])
 
 export interface DashboardItemProps {
   item: GridRect & { type: string; title: string }
   frame: GridFrame
   isEditing: boolean
+  /** The grid is a single column (phones): only height can change. */
+  isStacked?: boolean
   /** This item is the one currently being dragged or resized. */
   isActive: boolean
   /**
@@ -84,6 +97,7 @@ function DashboardItemComponent({
   item,
   frame,
   isEditing,
+  isStacked = false,
   isActive,
   float,
   onRemove,
@@ -143,6 +157,7 @@ function DashboardItemComponent({
   return (
     <Card
       data-slot="dashboard-item"
+      data-item-id={item.id}
       data-editing={isEditing || undefined}
       data-active={isActive || undefined}
       role="group"
@@ -181,8 +196,13 @@ function DashboardItemComponent({
       onPointerDown={(event) => {
         if (!isEditing) return
         // Ignore presses that started on a control or a resize handle.
-        if ((event.target as HTMLElement).closest("[data-no-drag]")) return
+        const target = event.target as HTMLElement
+        if (target.closest("[data-no-drag]")) return
         if (event.button !== 0) return
+        // A finger on the card body is a scroll, not a drag — otherwise a stacked
+        // phone layout cannot be scrolled at all in edit mode. Touch drags start
+        // from the header, which opts out of browser panning below.
+        if (event.pointerType !== "mouse" && !target.closest("[data-drag-handle]")) return
         onDragStart?.(event, item)
       }}
     >
@@ -199,8 +219,11 @@ function DashboardItemComponent({
         alignment are overridden.
       */}
       <CardHeader
+        data-drag-handle={isEditing || undefined}
         className={cn(
           "relative z-20 shrink-0 items-center gap-0 border-b px-3 py-2",
+          // Claim the gesture before the browser decides it is a scroll.
+          isEditing && "touch-none",
           insetClasses
         )}
       >
@@ -236,7 +259,9 @@ function DashboardItemComponent({
 
       <CardContent
         className={cn(
-          "min-h-0 flex-1 overflow-auto p-3",
+          // A size container, so widget bodies can use `@xs:` / `@sm:` variants
+          // that respond to the card's own width rather than the viewport's.
+          "@container min-h-0 flex-1 overflow-auto p-3",
           insetClasses,
           // Vertical too, so the bottom corners are clear as well.
           canInset && INSET_Y
@@ -246,9 +271,10 @@ function DashboardItemComponent({
       </CardContent>
 
       {isEditing &&
-        HANDLES.map(({ handle, className, corner }) => (
+        HANDLES.filter(({ handle }) => !isStacked || STACKED_HANDLES.has(handle)).map(({ handle, className, corner }) => (
           <div
             key={handle}
+            data-handle={handle}
             data-no-drag
             aria-hidden="true"
             onPointerDown={(event) => {
@@ -265,6 +291,7 @@ function DashboardItemComponent({
                 // Scoped to this item: hinting on every widget at once whenever the
                 // pointer is anywhere in the canvas is just noise.
                 "group-hover/item:after:opacity-40 group-focus-visible/item:after:opacity-60",
+                "pointer-coarse:after:opacity-50",
                 "hover:after:opacity-100",
               ]
             )}
@@ -288,6 +315,7 @@ export const DashboardItem = React.memo(
     prev.item.h === next.item.h &&
     prev.item.title === next.item.title &&
     prev.isEditing === next.isEditing &&
+    prev.isStacked === next.isStacked &&
     prev.isActive === next.isActive &&
     prev.float === next.float &&
     prev.frame === next.frame &&

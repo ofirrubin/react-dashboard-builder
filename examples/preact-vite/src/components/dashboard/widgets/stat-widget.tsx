@@ -19,6 +19,10 @@ export interface StatWidgetProps {
  *
  * Every colour here comes from a theme token, so the widget follows the host
  * app's palette and dark mode with no `dark:` overrides of its own.
+ *
+ * Sized with container queries (`@xs:`, `@max-3xs:`), which answer to the card's
+ * own width: the same widget is a 100px tile on desktop and a full-width row on
+ * a phone, and a viewport breakpoint cannot tell those apart.
  */
 export function StatWidget({
   label,
@@ -36,7 +40,9 @@ export function StatWidget({
         {label}
       </span>
       <div className="flex flex-wrap items-baseline gap-2">
-        <span className="text-2xl font-semibold tabular-nums">{value}</span>
+        <span className="text-xl font-semibold tabular-nums @3xs:text-2xl @xs:text-3xl">
+          {value}
+        </span>
         {delta && (
           <Badge variant={trend === "down" ? "destructive" : "secondary"}>
             {TrendIcon && <TrendIcon data-icon="inline-start" />}
@@ -44,7 +50,7 @@ export function StatWidget({
           </Badge>
         )}
       </div>
-      {hint && <span className="text-muted-foreground text-xs">{hint}</span>}
+      {hint && <span className="text-muted-foreground text-xs @max-3xs:hidden">{hint}</span>}
     </div>
   )
 }

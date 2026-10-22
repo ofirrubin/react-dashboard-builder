@@ -42,6 +42,7 @@ export type { MeasureOptions } from './geometry';
 
 export {
   applyResize,
+  commitPlacement,
   createOccupancyMatrix,
   findFreeSlot,
   isFree,
@@ -50,7 +51,7 @@ export {
   reflow,
   resolveCollisions,
 } from './layout';
-export type { PlacementOptions, ResolveOptions } from './layout';
+export type { PlacementOptions, ReflowOptions, ResolveOptions } from './layout';
 
 export { SCHEMA_VERSION, nextItemId, parseLayout, serializeLayout } from './serialize';
 export type { ParseResult } from './serialize';

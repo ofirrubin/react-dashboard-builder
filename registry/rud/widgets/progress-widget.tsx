@@ -25,7 +25,8 @@ export function ProgressWidget({ rows, className }: ProgressWidgetProps) {
           <div key={row.label} className="flex flex-col gap-1.5">
             <div className="flex items-baseline justify-between gap-2">
               <span className="truncate text-sm font-medium">{row.label}</span>
-              <span className="text-muted-foreground text-xs tabular-nums">
+              {/* The bar already shows the ratio; on a sliver of a card, drop the caption. */}
+              <span className="text-muted-foreground text-xs tabular-nums @max-3xs:hidden">
                 {row.caption ?? `${percent}%`}
               </span>
             </div>
