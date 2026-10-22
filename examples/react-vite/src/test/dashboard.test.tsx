@@ -1,5 +1,5 @@
 import * as React from "react"
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { overlaps } from "rud-dashboard"
 import type { SerializedItem } from "rud-dashboard"
 import { describe, expect, it } from "vitest"
@@ -118,6 +118,32 @@ describe("first load", () => {
   it("uses a widget's stackedHeight in the single-column layout", () => {
     const state = renderDashboard({ width: PHONE })
     expect(state.layout.find((i) => i.id === "c")?.h).toBe(5)
+  })
+})
+
+describe("reloading a layout saved on another screen", () => {
+  /** What a phone session saves: stacked x/y, desktop anchors. */
+  const savedOnPhone = () => {
+    const state = renderDashboard({ width: PHONE })
+    const saved = state.layout
+    cleanup()
+    return saved
+  }
+
+  it("restores the desktop arrangement when a phone-saved layout loads on desktop", () => {
+    // Regression: a live resize restored anchors, but a fresh load at desktop
+    // width fitted the phone x/y and stacked everything in column 0.
+    const state = renderDashboard({ width: DESKTOP, layout: savedOnPhone() })
+    expect(rects(state.layout)).toEqual(rects(DESKTOP_LAYOUT))
+  })
+
+  it("keeps a phone-made order when it loads on a phone again", () => {
+    const saved = savedOnPhone().map((item) =>
+      item.id === "c" ? { ...item, y: 0 } : { ...item, y: item.y + 5 }
+    )
+    const state = renderDashboard({ width: PHONE, layout: saved })
+    const order = [...state.layout].sort((p, q) => p.y - q.y).map((i) => i.id)
+    expect(order).toEqual(["c", "a", "b"])
   })
 })
 

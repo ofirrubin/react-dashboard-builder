@@ -7,6 +7,7 @@ import {
   clamp,
   commitPlacement,
   findFreeSlot,
+  fitLayout,
   gridToPixel,
   measureGrid,
   nextItemId,
@@ -325,22 +326,25 @@ export function useDashboard({
       if (width === 0) return
 
       const nextCols = resolveColumns(width, grid.columns)
-      // The pre-measure placeholder is one column — the same as a phone. So on a
-      // phone the first measure sees "no change" and would leave a desktop
-      // layout hanging off the right edge. Fit it against itself instead.
-      const previousCols = fittedRef.current ? metricsRef.current.cols : nextCols
+      const previousCols = metricsRef.current.cols
+      // The first measure fits the saved layout to this screen. It cannot be a
+      // reflow from the one-column placeholder: on a phone that is "no change",
+      // which left desktop layouts hanging off the right edge.
       const firstFit = !fittedRef.current
       fittedRef.current = true
+      const heightAt = (item: SerializedItem, cols: number) =>
+        cols === 1 ? widgetsRef.current[item.type]?.stackedHeight : undefined
 
       // Reflow before measuring rows, so the height accounts for the new layout.
       if ((firstFit || nextCols !== previousCols) && itemsRef.current.length > 0) {
-        const reflowed = reflow(itemsRef.current, {
-          fromCols: previousCols,
-          toCols: nextCols,
-          minSpan: grid.minSpan,
-          heightAt: (item, cols) =>
-            cols === 1 ? widgetsRef.current[item.type]?.stackedHeight : undefined,
-        })
+        const reflowed = firstFit
+          ? fitLayout(itemsRef.current, { cols: nextCols, minSpan: grid.minSpan, heightAt })
+          : reflow(itemsRef.current, {
+              fromCols: previousCols,
+              toCols: nextCols,
+              minSpan: grid.minSpan,
+              heightAt,
+            })
         setItems(reflowed)
         setMetrics(measureGrid(width, reflowed, grid, { maxHeight: heightCap, maxHeightMode }))
       } else {

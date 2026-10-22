@@ -4,6 +4,7 @@ import {
   commitPlacement,
   createOccupancyMatrix,
   findFreeSlot,
+  fitLayout,
   isFree,
   overlaps,
   packItems,
@@ -252,18 +253,6 @@ describe('reflow', () => {
     expect(order).toEqual(['revenue', 'orders', 'customers', 'aov', 'chart', 'top']);
   });
 
-  it('fits a layout on first load when the column count did not change', () => {
-    // On a phone the first measure resolves 1 column, the same as the
-    // pre-measure placeholder, so there is no "change" to trigger a reflow.
-    const fitted = reflow(desktop(), { fromCols: 1, toCols: 1 });
-    for (const item of fitted) {
-      expect(item.x + item.w).toBeLessThanOrEqual(1);
-    }
-    expectNoOverlaps(fitted);
-    const back = reflow(fitted, { fromCols: 1, toCols: 12 });
-    expect(positions(back)).toEqual(positions(desktop()));
-  });
-
   it('keeps existing anchors rather than overwriting them on narrowing', () => {
     const anchored = [{ ...rect('a', 0, 0, 4, 2), anchorX: 8, anchorY: 0, anchorW: 4, anchorH: 2 }];
     const phone = reflow(anchored, { fromCols: 6, toCols: 1 });
@@ -279,6 +268,51 @@ describe('reflow', () => {
 
     const back = reflow(phone, { fromCols: 1, toCols: 12, heightAt });
     expect(back.find((i) => i.id === 'chart')?.h).toBe(3);
+  });
+});
+
+describe('fitLayout', () => {
+  const desktop = (): GridRect[] => [
+    rect('a', 0, 0, 6, 2),
+    rect('b', 6, 0, 6, 2),
+    rect('c', 0, 2, 8, 4),
+  ];
+  const rects = (items: readonly GridRect[]) =>
+    Object.fromEntries(items.map((i) => [i.id, { x: i.x, y: i.y, w: i.w, h: i.h }]));
+  /** What a phone session saves: stacked positions, desktop anchors. */
+  const savedOnPhone = (): GridRect[] => reflow(desktop(), { fromCols: 12, toCols: 1 });
+
+  it('restores the desktop arrangement when a phone-saved layout loads on desktop', () => {
+    // Regression: fitting with the current x/y left every widget stacked in
+    // column 0 at full desktop width.
+    expect(rects(fitLayout(savedOnPhone(), { cols: 12 }))).toEqual(rects(desktop()));
+  });
+
+  it('keeps the phone order when a phone-saved layout loads on a phone', () => {
+    const phone = savedOnPhone();
+    // Reordered on the phone: c first.
+    const reordered = phone.map((i) =>
+      i.id === 'c' ? { ...i, y: 0 } : { ...i, y: i.y + 4 }
+    );
+    const fitted = fitLayout(reordered, { cols: 1 });
+    expect([...fitted].sort((p, q) => p.y - q.y).map((i) => i.id)).toEqual(['c', 'a', 'b']);
+    expectNoOverlaps(fitted);
+  });
+
+  it('fits a desktop layout to a phone and can widen back', () => {
+    const fitted = fitLayout(desktop(), { cols: 1 });
+    for (const item of fitted) expect(item.x + item.w).toBeLessThanOrEqual(1);
+    expectNoOverlaps(fitted);
+    expect(rects(reflow(fitted, { fromCols: 1, toCols: 12 }))).toEqual(rects(desktop()));
+  });
+
+  it('leaves an anchorless desktop layout unchanged at desktop width', () => {
+    expect(rects(fitLayout(desktop(), { cols: 12 }))).toEqual(rects(desktop()));
+  });
+
+  it('applies heightAt', () => {
+    const fitted = fitLayout(desktop(), { cols: 1, heightAt: (i) => (i.id === 'c' ? 6 : undefined) });
+    expect(fitted.find((i) => i.id === 'c')?.h).toBe(6);
   });
 });
 

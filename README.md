@@ -359,8 +359,11 @@ is what the install URL serves.
   widening, so a layout that passes through a phone always comes back. Before,
   an anchorless layout narrowed to one column and saved stayed one column
   everywhere. Already-collapsed saved layouts are not repaired — reset them.
-  Passing the same `fromCols` and `toCols` fits a layout to the grid it is shown
-  on (use it on first load).
+- New `fitLayout(items, { cols })`: fit a saved layout on first render, before
+  there is a previous column count. Items the grid can show at full width return
+  to their anchors, so a layout saved on a phone opens on desktop as the desktop
+  arrangement. Do not use `reflow` with equal counts for this — it keeps the
+  phone positions.
 - New `commitPlacement(item, rect, cols)`: apply a user's drop or resize and
   update the anchors only when the grid is wide enough to show the item at its
   intended width. Renderers that wrote anchors directly on every commit should

@@ -248,10 +248,9 @@ function withAnchors<T extends GridRect>(item: T): T {
  * Re-fit items after the column count changes. Widening restores anchors where
  * possible; narrowing clamps spans and lets items reflow downward.
  *
- * Pass the same count for `fromCols` and `toCols` to fit a layout to the grid
- * it is being shown on — on a first load, say, where the saved layout was made
- * on a wider screen. Anything that is not widening records anchors first, so a
- * round trip through a phone always comes back to the original arrangement.
+ * Anything that is not widening records anchors first, so a round trip through
+ * a phone always comes back to the original arrangement. For a first load, where
+ * there is no previous column count, use `fitLayout` instead.
  */
 export function reflow<T extends GridRect>(
   items: readonly T[],
@@ -271,6 +270,36 @@ export function reflow<T extends GridRect>(
   });
 
   return resolveCollisions(resized, { cols: toCols, minSpan, reAnchor: widening });
+}
+
+/**
+ * Fit a saved layout to the grid it is being shown on — the first render, before
+ * there is any previous column count to reflow from.
+ *
+ * A saved layout may have been made on any screen, so each item is judged on its
+ * own, by the same rule as `commitPlacement`: one the grid can show at its
+ * intended width goes back to its anchor, and one it cannot (a desktop widget on
+ * a phone) keeps its current spot and is clamped. So a layout saved on a phone
+ * opens on desktop as the desktop arrangement, and opens on a phone in the order
+ * it was left in. Missing anchors are recorded first, as in `reflow`.
+ */
+export function fitLayout<T extends GridRect>(
+  items: readonly T[],
+  { cols, minSpan = 1, heightAt }: { cols: number; minSpan?: number; heightAt?: ReflowOptions<T>['heightAt'] }
+): T[] {
+  const fitted = items.map((original) => {
+    const item = withAnchors(original);
+    const intendedW = item.anchorW ?? item.w;
+    const fits = intendedW <= cols;
+    return {
+      ...item,
+      x: fits ? (item.anchorX ?? item.x) : item.x,
+      y: fits ? (item.anchorY ?? item.y) : item.y,
+      w: clamp(Math.max(minSpan, intendedW), minSpan, cols),
+      h: Math.max(minSpan, heightAt?.(original, cols) ?? item.anchorH ?? item.h),
+    };
+  });
+  return resolveCollisions(fitted, { cols, minSpan });
 }
 
 /**

@@ -45,6 +45,7 @@ export {
   commitPlacement,
   createOccupancyMatrix,
   findFreeSlot,
+  fitLayout,
   isFree,
   overlaps,
   packItems,
