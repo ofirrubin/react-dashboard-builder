@@ -17,6 +17,12 @@ export interface ChartWidgetProps {
   variant?: "bar" | "area"
   /** Any chart token, e.g. "var(--chart-1)". */
   color?: string
+  /**
+   * Drop the axis and grid lines, so a narrow card is all chart. Pass the
+   * dashboard's `compact` flag straight through: `render: (ctx) =>
+   * <ChartWidget compact={ctx.compact} … />`.
+   */
+  compact?: boolean
   className?: string
 }
 
@@ -35,6 +41,7 @@ export function ChartWidget({
   seriesName = "Value",
   variant = "bar",
   color = "var(--chart-1)",
+  compact = false,
   className,
 }: ChartWidgetProps) {
   const config = {
@@ -43,9 +50,10 @@ export function ChartWidget({
 
   const axis = (
     <>
-      <CartesianGrid vertical={false} />
+      {!compact && <CartesianGrid vertical={false} />}
       <XAxis
         dataKey="label"
+        hide={compact}
         tickLine={false}
         axisLine={false}
         tickMargin={8}

@@ -42,15 +42,17 @@ export type { MeasureOptions } from './geometry';
 
 export {
   applyResize,
+  commitPlacement,
   createOccupancyMatrix,
   findFreeSlot,
+  fitLayout,
   isFree,
   overlaps,
   packItems,
   reflow,
   resolveCollisions,
 } from './layout';
-export type { PlacementOptions, ResolveOptions } from './layout';
+export type { PlacementOptions, ReflowOptions, ResolveOptions } from './layout';
 
 export { SCHEMA_VERSION, nextItemId, parseLayout, serializeLayout } from './serialize';
 export type { ParseResult } from './serialize';

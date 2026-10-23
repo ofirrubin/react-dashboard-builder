@@ -1,6 +1,6 @@
 {
   "name": "rud-dashboard",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "Ofir Rubin",
   "description": "Headless dashboard layout engine: grid geometry, deterministic collision resolution, and layout serialization. Zero dependencies, no framework, no CSS.",
   "license": "MIT",

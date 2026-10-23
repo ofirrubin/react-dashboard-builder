@@ -146,6 +146,7 @@ export function Dashboard({
     isFixedHeight,
     isAddWidgetMode,
     isMeasured,
+    isStacked,
     canvasRef,
     setEditing,
     toggleAddWidgetMode,
@@ -156,12 +157,31 @@ export function Dashboard({
     toggleFixedHeight,
     beginDrag,
     beginResize,
+    renderContext,
   } = api
 
   const [gridStyle, setGridStyle] = React.useState<GridStyle>(gridStyleProp ?? "lines")
   React.useEffect(() => {
     if (gridStyleProp) setGridStyle(gridStyleProp)
   }, [gridStyleProp])
+
+  /**
+   * Bring a newly added widget into view. On a phone it lands at the bottom of
+   * a single tall column, usually well below the fold, so without this tapping
+   * "Add" appears to do nothing.
+   */
+  const knownIdsRef = React.useRef<Set<string> | null>(null)
+  React.useEffect(() => {
+    const known = knownIdsRef.current
+    knownIdsRef.current = new Set(items.map((item) => item.id))
+    if (!known || !isMeasured) return
+    const added = items.find((item) => !known.has(item.id))
+    if (!added) return
+    const element = Array.from(
+      canvasRef.current?.querySelectorAll<HTMLElement>("[data-item-id]") ?? []
+    ).find((node) => node.dataset.itemId === added.id)
+    element?.scrollIntoView?.({ block: "nearest", behavior: "smooth" })
+  }, [items, isMeasured, canvasRef])
 
   const renderBody = (item: SerializedItem) => {
     const definition = widgets[item.type]
@@ -172,13 +192,7 @@ export function Dashboard({
         </p>
       )
     }
-    return definition.render({
-      id: item.id,
-      type: item.type,
-      title: item.title,
-      size: { w: item.w, h: item.h },
-      isEditing,
-    })
+    return definition.render(renderContext(item))
   }
 
   return (
@@ -250,6 +264,7 @@ export function Dashboard({
                   item={item}
                   frame={metrics.frame}
                   isEditing={isEditing}
+                  isStacked={isStacked}
                   isActive={activeId === item.id}
                   float={activeId === item.id ? float : null}
                   onRemove={removeWidget}
@@ -306,4 +321,5 @@ export function Dashboard({
 }
 
 export { useDashboard }
+export { COMPACT_WIDTH } from "./use-dashboard"
 export type { DashboardApi, WidgetCatalog, WidgetDefinition, WidgetRenderContext } from "./use-dashboard"

@@ -75,7 +75,9 @@ const widgets: WidgetCatalog = {
     icon: BarChart3Icon,
     defaultSize: { w: 6, h: 4 },
     preview: () => <ChartWidgetPreview />,
-    render: () => <ChartWidget data={REVENUE} seriesName="Revenue" variant="bar" />,
+    render: ({ compact }) => (
+      <ChartWidget data={REVENUE} seriesName="Revenue" variant="bar" compact={compact} />
+    ),
   },
   traffic: {
     title: "Traffic",
@@ -83,8 +85,14 @@ const widgets: WidgetCatalog = {
     icon: ActivityIcon,
     defaultSize: { w: 6, h: 4 },
     preview: () => <ChartWidgetPreview />,
-    render: () => (
-      <ChartWidget data={TRAFFIC} seriesName="Visits" variant="area" color="var(--chart-2)" />
+    render: ({ compact }) => (
+      <ChartWidget
+        data={TRAFFIC}
+        seriesName="Visits"
+        variant="area"
+        color="var(--chart-2)"
+        compact={compact}
+      />
     ),
   },
   quotas: {
@@ -92,6 +100,8 @@ const widgets: WidgetCatalog = {
     description: "Usage against plan limits",
     icon: GaugeIcon,
     defaultSize: { w: 3, h: 4 },
+    // Full width on a phone, three bars need far less height than in a narrow tile.
+    stackedHeight: 3,
     preview: () => <ProgressWidgetPreview />,
     render: () => (
       <ProgressWidget
@@ -108,6 +118,7 @@ const widgets: WidgetCatalog = {
     description: "Prose, styled by Typeset",
     icon: StickyNoteIcon,
     defaultSize: { w: 3, h: 4 },
+    stackedHeight: 3,
     preview: () => <NotesWidgetPreview />,
     render: () => (
       <NotesWidget>

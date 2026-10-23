@@ -49,7 +49,15 @@ export function DashboardWidgetBar({
           No widgets registered.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        // On phones a one-column list of cards would push the dashboard you are
+        // adding to off the screen, so it becomes a row you swipe through.
+        <div
+          className={cn(
+            "grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+            "max-sm:-mx-3 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto",
+            "max-sm:scroll-px-3 max-sm:px-3 max-sm:pb-1"
+          )}
+        >
           {entries.map(([type, definition], index) => {
             const Icon = definition.icon
             const size = definition.defaultSize ?? { w: 4, h: 3 }
@@ -62,6 +70,7 @@ export function DashboardWidgetBar({
                 style={{ animationDelay: `${Math.min(index * STAGGER_MS, STAGGER_CAP_MS)}ms` }}
                 className={cn(
                   "group/entry flex flex-col gap-2 rounded-lg border p-2 text-left",
+                  "max-sm:w-44 max-sm:shrink-0 max-sm:snap-start",
                   // Concentric: bar radius (--radius-xl) minus its p-3 inset.
                   "hover:border-primary/40 hover:bg-accent/40",
                   "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",

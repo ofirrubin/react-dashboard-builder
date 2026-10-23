@@ -14,7 +14,7 @@
         "layout"
       ],
       "dependencies": [
-        "rud-dashboard@^0.2.0",
+        "rud-dashboard@^0.3.0",
         "lucide-react"
       ],
       "registryDependencies": [
@@ -56,7 +56,7 @@
           "target": "@components/dashboard/use-dashboard.ts"
         }
       ],
-      "docs": "Render it with a widget catalog:\n\n  const widgets = {\n    revenue: {\n      title: \"Revenue\",\n      defaultSize: { w: 3, h: 3 },\n      render: () => <RevenueCard />,\n    },\n  }\n\n  <Dashboard widgets={widgets} defaultLayout={layout} onLayoutChange={save} />\n\nThe layout is plain JSON \u2014 persist it wherever you like. Nothing here ships CSS or a Tailwind config; every colour and radius comes from your existing theme tokens."
+      "docs": "Render it with a widget catalog:\n\n  const widgets = {\n    revenue: {\n      title: \"Revenue\",\n      defaultSize: { w: 3, h: 3 },\n      render: () => <RevenueCard />,\n    },\n  }\n\n  <Dashboard widgets={widgets} defaultLayout={layout} onLayoutChange={save} />\n\nThe layout is plain JSON — persist it wherever you like. Nothing here ships CSS or a Tailwind config; every colour and radius comes from your existing theme tokens.\n\nOn phones the grid stacks to one column. Drags start from a card's header on touch, so the page still scrolls, and edits made there never overwrite the desktop layout. Make widgets mobile-friendly with container queries (every widget body is an @container, so `@xs:` variants follow the card's width), the render context (`compact`, `stacked`, `pixelSize`, `columns`), and `stackedHeight` for the single-column height."
     },
     {
       "name": "dashboard-widgets",
@@ -98,7 +98,7 @@
           "target": "@components/dashboard/widgets/notes-widget.tsx"
         }
       ],
-      "docs": "These are ordinary components \u2014 edit or delete them freely. They take data as props and hold no state, so they work outside the dashboard too."
+      "docs": "These are ordinary components — edit or delete them freely. They take data as props and hold no state, so they work outside the dashboard too. They adapt to narrow cards with container queries; ChartWidget also takes `compact` — pass the render context's `compact` straight through."
     },
     {
       "name": "dashboard-theme",
@@ -270,7 +270,7 @@
         }
       },
       "files": [],
-      "docs": "Entirely optional \u2014 the dashboard already looks correct on your theme tokens without it.\n\nThis adds three things:\n  1. Layered depth and drag feedback, hooked onto [data-slot=dashboard-*] so no component file changes.\n  2. A compact `.typeset-widget` rhythm preset for prose widgets.\n  3. A small `.typeset` prose layer, in case you have not installed shadcn Typeset.\n\nAlready using Typeset? Its own CSS covers item 3; keep this item only for the depth and the `.typeset-widget` preset, and delete the `:where(.typeset)` rules from your CSS file.\n\nAll shadows use `oklch`/`color-mix` against your existing tokens, so light and dark both follow the host theme automatically."
+      "docs": "Entirely optional — the dashboard already looks correct on your theme tokens without it.\n\nThis adds three things:\n  1. Layered depth and drag feedback, hooked onto [data-slot=dashboard-*] so no component file changes.\n  2. A compact `.typeset-widget` rhythm preset for prose widgets.\n  3. A small `.typeset` prose layer, in case you have not installed shadcn Typeset.\n\nAlready using Typeset? Its own CSS covers item 3; keep this item only for the depth and the `.typeset-widget` preset, and delete the `:where(.typeset)` rules from your CSS file.\n\nAll shadows use `oklch`/`color-mix` against your existing tokens, so light and dark both follow the host theme automatically."
     },
     {
       "name": "dashboard-demo",
@@ -294,7 +294,7 @@
           "target": "@components/dashboard-demo.tsx"
         }
       ],
-      "docs": "Drop it straight into a route:\n\n  import { DashboardDemo } from \"@/components/dashboard-demo\"\n\n  export default function Page() {\n    return <div className=\"p-6\"><DashboardDemo /></div>\n  }\n\nIt is meant to be read and then edited \u2014 the widget catalog at the top of the file is the only part you need to change to make it yours."
+      "docs": "Drop it straight into a route:\n\n  import { DashboardDemo } from \"@/components/dashboard-demo\"\n\n  export default function Page() {\n    return <div className=\"p-6\"><DashboardDemo /></div>\n  }\n\nIt is meant to be read and then edited — the widget catalog at the top of the file is the only part you need to change to make it yours."
     }
   ]
 }
